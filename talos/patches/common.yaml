@@ -53,3 +53,6 @@ machine:
         endpoints: [http://127.0.0.1:29999]
       quay.io:
         endpoints: [http://127.0.0.1:29999]
+      # In-cluster app registry (LB .28) — plain HTTP, mirrored explicitly
+      192.168.1.28:5000:
+        endpoints: [http://192.168.1.28:5000]

@@ -23,7 +23,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: worker
-          image: ghcr.io/coreyc315/ks-worker:1.0.0
+          image: 192.168.1.28:5000/ks-worker:1.0.0
           ports:
             - {containerPort: 9090, name: metrics}
           envFrom:

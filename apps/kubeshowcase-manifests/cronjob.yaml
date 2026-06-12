@@ -26,7 +26,7 @@ spec:
             seccompProfile: {type: RuntimeDefault}
           containers:
             - name: pgdump
-              image: ghcr.io/coreyc315/ks-pgdump:1.0.0
+              image: 192.168.1.28:5000/ks-pgdump:1.0.0
               env:
                 - name: DATABASE_URL
                   valueFrom:
