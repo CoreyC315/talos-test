@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.12.0
+      helm:
+        releaseName: longhorn
+        valuesObject:
+          # RAM-constrained tier decision: 2 replicas (3 workers, 14GB total RAM)
+          persistence:
+            defaultClass: true
+            defaultClassReplicaCount: 2
+          defaultSettings:
+            defaultReplicaCount: 2
+            defaultDataPath: /var/lib/longhorn
+            guaranteedInstanceManagerCPU: 5
+            backupTarget: s3://longhorn-backups@homelab/
+            backupTargetCredentialSecret: minio-credentials
+            concurrentReplicaRebuildPerNodeLimit: 2
+          longhornUI:
+            replicas: 1
+          ingress:
+            enabled: false # HTTPRoute instead
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: platform/longhorn/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # Longhorn needs hostPath/privileged — explicitly privileged, documented in README
+        pod-security.kubernetes.io/enforce: privileged

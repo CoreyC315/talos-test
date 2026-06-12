@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: minio-root
+    namespace: minio
+type: Opaque
+stringData:
+    rootUser: ENC[AES256_GCM,data:/sfFtrUa72+PF2tjLhSPjItr,iv:NvgjUGq2KrLzrguAmr7iccHbukPxhu5cYqWv0dztaCc=,tag:Ne/Hw3EI+FhTQZTwFE7ISQ==,type:str]
+    rootPassword: ENC[AES256_GCM,data:j7bFhk1oY79k+Q4eaNbyx/+CrVtX49BTrPHVrm8a0xpzk4R6LIKn4Q==,iv:KSxgFCf7YX1Np2jG+3QPc2i0vZ9z9JCN6cE8VNX44ls=,tag:/4BYIAZW/6LMwA0D2EGwNA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA3L3JnWFhhTEloeTZjbnBl
+            SExEcXVvSklrRTBGMjZwL0ltdDg3RFlmUEhRCjZPUklDdVNBYmY1UHNqOVRzNG1s
+            YlVzRVVyZU9QbWNhTjJ4d1BrNGt1WG8KLS0tIGR2NHhzWlF4TS9EdXdBZGZlemtm
+            MjFtakFQODdoT29rdDU0YzRCK1UvOUEKWgvUvqku2AlE37EPkyqVbQr2ofdeWC2q
+            DQUrxI1dCQhBf2cK65b25+NF7JyOj98E+NBlSCtCggZK0jKr8r24AA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:26:36Z"
+    mac: ENC[AES256_GCM,data:8HUdJhs5nM2ACOawJ+J3WMcvPIxafnw/sUB+zsklysvaatPCC+aElmV75UlktvcqJ6qFIvkyjCmNiAlmziTV/rn6np4KdO5nH2UVvN+iauvK32B2VBMyBSWAGDXKtFSNw9bp1x89uw74cBFyh+vZZ6A4K8GOdiK2/J3ltGQSuLU=,iv:tUGhs0VBvhzwW3WZxh5PsQNqKaTvhwfeziCTk5Np1DQ=,tag:6FoJ2Uek+MjDNRr1meNjhA==,type:str]
+    version: 3.13.1

@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.cilium.io
+      chart: cilium
+      targetRevision: 1.19.4
+      helm:
+        releaseName: cilium
+        valueFiles:
+          - $values/platform/cilium/values.yaml
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: platform/cilium/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+  ignoreDifferences:
+    - group: ""
+      kind: ConfigMap
+      name: hubble-ca-cert
+      jsonPointers: [/data]
+    - group: ""
+      kind: Secret
+      jsonPointers: [/data]
+      name: hubble-server-certs
+    - group: ""
+      kind: Secret
+      jsonPointers: [/data]
+      name: hubble-relay-client-certs

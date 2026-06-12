@@ -1,0 +1,80 @@
+# Argo CD 3.4.x (chart 9.5.21) — homelab-sized, KSOPS-enabled repo-server
+configs:
+  repositories:
+    spegel-oci:
+      url: ghcr.io/spegel-org/helm-charts
+      name: spegel
+      type: helm
+      enableOCI: "true"
+  params:
+    server.insecure: true # TLS terminates at the Cilium Gateway
+    controller.diff.server.side: true
+  cm:
+    kustomize.buildOptions: --enable-alpha-plugins --enable-exec
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil and obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+      return hs
+
+dex:
+  enabled: false # single-user homelab; admin + local accounts
+notifications:
+  enabled: false
+
+controller:
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+server:
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {memory: 256Mi}
+
+applicationSet:
+  resources:
+    requests: {cpu: 25m, memory: 96Mi}
+    limits: {memory: 192Mi}
+
+redis:
+  resources:
+    requests: {cpu: 25m, memory: 64Mi}
+    limits: {memory: 128Mi}
+
+repoServer:
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+    limits: {memory: 768Mi}
+  env:
+    - name: XDG_CONFIG_HOME
+      value: /.config
+    - name: SOPS_AGE_KEY_FILE
+      value: /sops-age/keys.txt
+  volumes:
+    - name: custom-tools
+      emptyDir: {}
+    - name: sops-age
+      secret:
+        secretName: sops-age # created imperatively at bootstrap; never in Git
+  volumeMounts:
+    - name: custom-tools
+      mountPath: /usr/local/bin/ksops
+      subPath: ksops
+    - name: sops-age
+      mountPath: /sops-age
+  initContainers:
+    - name: install-ksops
+      image: viaduct/ksops:v4.4.0
+      command: ["/bin/sh", "-c"]
+      args:
+        - echo "Installing KSOPS..."; cp /usr/local/bin/ksops /custom-tools/; echo done
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools

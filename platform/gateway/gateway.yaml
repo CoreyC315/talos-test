@@ -1,0 +1,46 @@
+# Shared north-south Gateway (Cilium implementation), pinned to LB IP .27
+# Every UI/API in the cluster attaches an HTTPRoute to this listener.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-tls
+  namespace: gateway
+spec:
+  secretName: wildcard-tls
+  commonName: "*.192.168.1.27.nip.io"
+  dnsNames:
+    - "*.192.168.1.27.nip.io"
+  duration: 2160h # 90d
+  renewBefore: 360h
+  issuerRef:
+    name: homelab-ca
+    kind: ClusterIssuer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared
+  namespace: gateway
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    annotations:
+      lbipam.cilium.io/ips: 192.168.1.27 # deterministic IP -> nip.io hostnames stay stable
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.192.168.1.27.nip.io"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All

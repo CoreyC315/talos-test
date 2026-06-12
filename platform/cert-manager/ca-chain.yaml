@@ -1,0 +1,59 @@
+# Homelab PKI: self-signed bootstrap -> root CA -> intermediate CA -> leaf ClusterIssuer.
+# More realistic than bare self-signed: workstations trust the ROOT once; leaves rotate freely.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: KubeShowcase Root CA
+  secretName: homelab-root-ca
+  duration: 87600h # 10y
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: homelab-root
+spec:
+  ca:
+    secretName: homelab-root-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-intermediate-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: KubeShowcase Intermediate CA
+  secretName: homelab-intermediate-ca
+  duration: 43800h # 5y
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: homelab-root
+    kind: ClusterIssuer
+---
+# THE issuer everything uses for leaf certs:
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: homelab-ca
+spec:
+  ca:
+    secretName: homelab-intermediate-ca

@@ -1,0 +1,87 @@
+# Cilium 1.19.4 — Talos-specific install (kube-proxy-free, KubePrism API endpoint)
+# Talos requires: no SYS_MODULE, cgroup hostRoot pre-mounted, KubePrism for the API.
+kubeProxyReplacement: true
+k8sServiceHost: localhost
+k8sServicePort: 7445 # Talos KubePrism — HA apiserver endpoint on every node
+
+ipam:
+  mode: kubernetes
+
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+# North-south: Cilium implements Gateway API (CRDs installed in bootstrap, wave -1)
+gatewayAPI:
+  enabled: true
+
+# LB-IPAM + L2 announcements replace MetalLB entirely (pool defined in lb-ipam.yaml)
+l2announcements:
+  enabled: true
+externalIPs:
+  enabled: true
+k8sClientRateLimit: # L2 leases are chatty; default rate limit starves the agent
+  qps: 32
+  burst: 64
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+    resources:
+      requests: {cpu: 25m, memory: 64Mi}
+  ui:
+    enabled: true
+    frontend:
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+    backend:
+      resources:
+        requests: {cpu: 10m, memory: 48Mi}
+  metrics:
+    enableOpenMetrics: true
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - httpV2:exemplars=true;labelsContext=source_namespace,destination_namespace
+
+operator:
+  replicas: 1
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {memory: 256Mi}
+
+resources: # cilium-agent daemonset
+  requests: {cpu: 100m, memory: 350Mi}
+  limits: {memory: 700Mi}
+
+# Let Prometheus find Cilium/Hubble once kube-prometheus-stack CRDs exist.
+# ServiceMonitors are toggled on later by the observability tier (apps/platform/cilium.yaml
+# flips these flags in a post-Observe sync) to avoid a CRD ordering deadlock at bootstrap.
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: false

@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.min.io
+      chart: minio
+      targetRevision: 5.4.0
+      helm:
+        releaseName: minio
+        valuesObject:
+          mode: standalone
+          replicas: 1
+          existingSecret: minio-root
+          persistence:
+            enabled: true
+            storageClass: longhorn
+            size: 40Gi
+          resources:
+            requests: {cpu: 100m, memory: 512Mi}
+            limits: {memory: 1Gi}
+          buckets:
+            - {name: loki-chunks, policy: none, purge: false}
+            - {name: loki-ruler, policy: none, purge: false}
+            - {name: tempo-traces, policy: none, purge: false}
+            - {name: longhorn-backups, policy: none, purge: false}
+            - {name: velero, policy: none, purge: false}
+            - {name: cnpg-backups, policy: none, purge: false}
+            - {name: pg-dumps, policy: none, purge: false}
+          metrics:
+            serviceMonitor:
+              enabled: false # flipped on by Observe tier
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: platform/minio/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

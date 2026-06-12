@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/metrics-server
+    chart: metrics-server
+    targetRevision: 3.13.1
+    helm:
+      releaseName: metrics-server
+      valuesObject:
+        args:
+          - --kubelet-insecure-tls # Talos kubelet serving certs are self-signed by default
+        resources:
+          requests: {cpu: 25m, memory: 64Mi}
+          limits: {memory: 128Mi}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

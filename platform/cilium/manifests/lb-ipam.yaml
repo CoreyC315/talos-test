@@ -1,0 +1,22 @@
+# Cilium LB-IPAM pool + L2 announcement policy — replaces MetalLB (never run both: ARP fights)
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: homelab-pool
+spec:
+  blocks:
+    - start: 192.168.1.26
+      stop: 192.168.1.30
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: l2-policy
+spec:
+  loadBalancerIPs: true
+  interfaces:
+    - ^ens[0-9]+ # Proxmox virtio NIC
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist # workers answer ARP; keeps CP NICs quiet

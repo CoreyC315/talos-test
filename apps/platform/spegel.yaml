@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spegel
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/spegel-org/helm-charts
+    chart: spegel
+    targetRevision: 0.7.1
+    helm:
+      releaseName: spegel
+      valuesObject:
+        spegel:
+          # Talos containerd paths (registries.mirrors in machine config point at hostPort 29999)
+          containerdSock: /run/containerd/containerd.sock
+          containerdRegistryConfigPath: /etc/cri/conf.d/hosts
+        service:
+          registry:
+            hostPort: 29999
+        resources:
+          requests: {cpu: 25m, memory: 64Mi}
+          limits: {memory: 160Mi}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: spegel
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged # hostPort + containerd socket
