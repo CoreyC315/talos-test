@@ -8,7 +8,7 @@ machine:
         addresses: [192.168.1.23/24]
         routes:
           - network: 0.0.0.0/0
-            gateway: 192.168.1.1
+            gateway: 192.168.1.254
 
   nodeLabels:
     topology.kubernetes.io/region: homelab
