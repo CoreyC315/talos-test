@@ -1,0 +1,110 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 1.10.0
+      helm:
+        releaseName: alloy
+        valuesObject:
+          controller:
+            type: daemonset
+          alloy:
+            resources:
+              requests: {cpu: 50m, memory: 160Mi}
+              limits: {memory: 320Mi}
+            extraPorts:
+              - name: otlp-grpc
+                port: 4317
+                targetPort: 4317
+                protocol: TCP
+              - name: otlp-http
+                port: 4318
+                targetPort: 4318
+                protocol: TCP
+            configMap:
+              create: true
+              content: |
+                // ---- Pod logs via Kubernetes API (no hostPath needed) ----
+                // Filter to pods on this node (chart sets HOSTNAME=spec.nodeName)
+                // so the daemonset doesn't ship every log 3x.
+                discovery.kubernetes "pods" {
+                  role = "pod"
+                  selectors {
+                    role  = "pod"
+                    field = "spec.nodeName=" + sys.env("HOSTNAME")
+                  }
+                }
+
+                discovery.relabel "pods" {
+                  targets = discovery.kubernetes.pods.targets
+
+                  rule {
+                    source_labels = ["__meta_kubernetes_namespace"]
+                    target_label  = "namespace"
+                  }
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_name"]
+                    target_label  = "pod"
+                  }
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_container_name"]
+                    target_label  = "container"
+                  }
+                }
+
+                loki.source.kubernetes "pods" {
+                  targets    = discovery.relabel.pods.output
+                  forward_to = [loki.write.default.receiver]
+                }
+
+                loki.write "default" {
+                  endpoint {
+                    url = "http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push"
+                  }
+                }
+
+                // ---- OTLP traces -> Tempo ----
+                otelcol.receiver.otlp "default" {
+                  grpc {
+                    endpoint = "0.0.0.0:4317"
+                  }
+                  http {
+                    endpoint = "0.0.0.0:4318"
+                  }
+                  output {
+                    traces = [otelcol.processor.batch.default.input]
+                  }
+                }
+
+                otelcol.processor.batch "default" {
+                  output {
+                    traces = [otelcol.exporter.otlp.tempo.input]
+                  }
+                }
+
+                otelcol.exporter.otlp "tempo" {
+                  client {
+                    endpoint = "tempo.monitoring.svc.cluster.local:4317"
+                    tls {
+                      insecure = true
+                    }
+                  }
+                }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

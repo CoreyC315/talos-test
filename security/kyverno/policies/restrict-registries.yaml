@@ -1,0 +1,50 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-registries
+  annotations:
+    policies.kyverno.io/title: Restrict Image Registries
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Images may only be pulled from a known allowlist of registries:
+      docker.io, ghcr.io, quay.io, registry.k8s.io, factory.talos.dev and
+      public.ecr.aws. Note: images must use fully-qualified names (e.g.
+      docker.io/library/nginx) to match.
+spec:
+  validationFailureAction: Audit # flip to Enforce later
+  background: true
+  rules:
+    - name: allowed-registries
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - longhorn-system
+                - kyverno
+                - falco
+                - spegel
+                - monitoring
+                - argocd
+                - cert-manager
+                - minio
+                - vault
+                - external-secrets
+                - trivy-system
+                - gateway
+      validate:
+        message: >-
+          Images are only allowed from: docker.io, ghcr.io, quay.io,
+          registry.k8s.io, factory.talos.dev, public.ecr.aws.
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/*"
+            containers:
+              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/*"

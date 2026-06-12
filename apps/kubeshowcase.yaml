@@ -1,0 +1,26 @@
+# The showcase app itself — wave 7, after every operator it depends on.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubeshowcase
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CoreyC315/talos-test.git
+    targetRevision: main
+    path: apps/kubeshowcase-manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubeshowcase
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff: {duration: 30s, factor: 2, maxDuration: 5m}

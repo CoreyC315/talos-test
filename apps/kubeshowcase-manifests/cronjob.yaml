@@ -1,0 +1,46 @@
+# CronJob primitive exhibit: nightly logical pg_dump to MinIO — deliberately separate
+# from CNPG's own WAL-archiving/base-backup machinery (belt + suspenders, and it shows the primitive).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ks-pgdump
+  namespace: kubeshowcase
+spec:
+  schedule: "30 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels: {app: ks-pgdump}
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: pgdump
+              image: ghcr.io/coreyc315/ks-pgdump:1.0.0
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef: {name: ks-db-app, key: uri}
+              envFrom:
+                - secretRef: {name: pgdump-s3}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: {drop: [ALL]}
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+                limits: {memory: 256Mi}
+          volumes:
+            - {name: tmp, emptyDir: {sizeLimit: 1Gi}}

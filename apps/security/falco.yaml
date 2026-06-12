@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: default
+  sources:
+    - repoURL: https://falcosecurity.github.io/charts
+      chart: falco
+      targetRevision: 9.1.0
+      helm:
+        releaseName: falco
+        valuesObject:
+          driver:
+            kind: modern_ebpf
+          tty: true
+          falco:
+            json_output: true
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 512Mi}
+          collectors:
+            enabled: true # container metadata enrichment (defaults)
+          falcosidekick:
+            enabled: true
+            replicaCount: 1
+            resources:
+              requests: {cpu: 10m, memory: 32Mi}
+              limits: {memory: 96Mi}
+            config:
+              alertmanager:
+                hostport: http://kube-prometheus-stack-alertmanager.monitoring.svc:9093
+            webui:
+              enabled: false # RAM-constrained: no UI, alerts go to Alertmanager
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # Falco needs eBPF + host access — documented in security/pss/namespaces.md
+        pod-security.kubernetes.io/enforce: privileged

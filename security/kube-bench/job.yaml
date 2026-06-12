@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kube-bench
+  namespace: kube-bench
+  annotations:
+    # Fixed name + Replace=true: every ArgoCD sync deletes and recreates the
+    # Job, so the CIS node benchmark reruns on each sync.
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      hostPID: true
+      containers:
+        - name: kube-bench
+          image: docker.io/aquasec/kube-bench:v0.14.0
+          args: ["run", "--targets", "node"]
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 192Mi}
+          volumeMounts:
+            # Talos exposes these paths (partially) on workers; mount what exists
+            - name: var-lib-kubelet
+              mountPath: /var/lib/kubelet
+              readOnly: true
+            - name: etc-kubernetes
+              mountPath: /etc/kubernetes
+              readOnly: true
+      volumes:
+        - name: var-lib-kubelet
+          hostPath:
+            path: /var/lib/kubelet
+        - name: etc-kubernetes
+          hostPath:
+            path: /etc/kubernetes

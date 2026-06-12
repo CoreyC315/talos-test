@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: 0.33.0
+      helm:
+        releaseName: vault
+        valuesObject:
+          server:
+            standalone:
+              enabled: true
+            ha:
+              enabled: false
+            dataStorage:
+              enabled: true
+              size: 2Gi
+              storageClass: longhorn
+            resources:
+              requests: {cpu: 50m, memory: 192Mi}
+              limits: {memory: 384Mi}
+          injector:
+            enabled: false # ESO pulls from Vault instead of the agent injector
+          ui:
+            enabled: true
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: security/vault/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

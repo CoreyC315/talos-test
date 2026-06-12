@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trivy-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: default
+  sources:
+    - repoURL: https://aquasecurity.github.io/helm-charts
+      chart: trivy-operator
+      targetRevision: 0.33.1
+      helm:
+        releaseName: trivy-operator
+        valuesObject:
+          targetNamespaces: "" # all namespaces
+          operator:
+            replicas: 1
+            # RAM-constrained: only one scan job at a time
+            scanJobsConcurrentLimit: 1
+            # No compliance cron — saves periodic CPU/RAM churn
+            clusterComplianceEnabled: false
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 384Mi}
+          trivy:
+            # Scan job pods — keep requests tiny, cap memory
+            resources:
+              requests: {cpu: 50m, memory: 128Mi}
+              limits: {memory: 512Mi}
+          serviceMonitor:
+            enabled: false # flipped on by Observe tier
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trivy-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

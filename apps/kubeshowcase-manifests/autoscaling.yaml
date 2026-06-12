@@ -1,0 +1,73 @@
+# THE THREE AUTOSCALERS, side by side, no conflicts:
+#   HPA  -> ks-api (CPU + custom Prometheus metric via prometheus-adapter)
+#   KEDA -> ks-worker (Redis list length, scale-to-zero)
+#   VPA  -> ks-frontend (InPlaceOrRecreate; k8s in-place pod resize exhibit)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+spec:
+  scaleTargetRef:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: ks-api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "20"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 120
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ks-worker
+  namespace: kubeshowcase
+spec:
+  scaleTargetRef:
+    name: ks-worker
+  minReplicaCount: 0 # scale-to-zero when the queue is empty
+  maxReplicaCount: 5
+  pollingInterval: 10
+  cooldownPeriod: 60
+  triggers:
+    - type: redis
+      metadata:
+        address: redis.kubeshowcase.svc.cluster.local:6379
+        listName: jobs
+        listLength: "5"
+        activationListLength: "0"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ks-frontend
+  namespace: kubeshowcase
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ks-frontend
+  updatePolicy:
+    updateMode: InPlaceOrRecreate # k8s >=1.33 in-place pod resize — "what's new" exhibit
+  resourcePolicy:
+    containerPolicies:
+      - containerName: frontend
+        minAllowed: {cpu: 10m, memory: 32Mi}
+        maxAllowed: {cpu: 200m, memory: 256Mi}

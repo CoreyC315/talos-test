@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: kubeshowcase
+  labels: {app: redis}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: redis}
+  template:
+    metadata:
+      labels: {app: redis}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          args: ["--maxmemory", "96mb", "--maxmemory-policy", "noeviction", "--save", ""]
+          ports:
+            - {containerPort: 6379, name: redis}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - {name: data, mountPath: /data}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 160Mi}
+          startupProbe:
+            exec: {command: [redis-cli, ping]}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            exec: {command: [redis-cli, ping]}
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: {port: 6379}
+            periodSeconds: 10
+      volumes:
+        - name: data
+          emptyDir: {sizeLimit: 256Mi} # queue is transient; durability lives in Postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: kubeshowcase
+  labels: {app: redis}
+spec:
+  selector: {app: redis}
+  ports:
+    - {port: 6379, targetPort: 6379, name: redis}

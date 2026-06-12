@@ -1,0 +1,143 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 86.2.2
+      helm:
+        releaseName: kube-prometheus-stack
+        valuesObject:
+          # RAM-constrained tier decision: single replicas, short retention (14GB total RAM)
+          prometheus:
+            prometheusSpec:
+              replicas: 1
+              retention: 2d
+              enableFeatures:
+                - exemplar-storage
+              # Scrape ALL ServiceMonitors/PodMonitors/Probes/Rules cluster-wide
+              podMonitorSelectorNilUsesHelmValues: false
+              serviceMonitorSelectorNilUsesHelmValues: false
+              probeSelectorNilUsesHelmValues: false
+              ruleSelectorNilUsesHelmValues: false
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: longhorn
+                    accessModes: [ReadWriteOnce]
+                    resources:
+                      requests:
+                        storage: 10Gi
+              resources:
+                requests: {cpu: 200m, memory: 1Gi}
+                limits: {memory: 1.6Gi}
+          alertmanager:
+            enabled: true
+            alertmanagerSpec:
+              replicas: 1
+              resources:
+                requests: {memory: 64Mi}
+                limits: {memory: 128Mi}
+            config:
+              route:
+                receiver: ntfy
+                group_by: [alertname, namespace]
+                group_wait: 30s
+                group_interval: 5m
+                repeat_interval: 12h
+                routes:
+                  - receiver: ntfy
+                    matchers:
+                      - severity =~ "critical|warning"
+              receivers:
+                - name: ntfy
+                  webhook_configs:
+                    - url: https://ntfy.sh/kubeshowcase-corey-alerts
+                      send_resolved: true
+          grafana:
+            enabled: true
+            admin:
+              existingSecret: grafana-admin
+              userKey: admin-user
+              passwordKey: admin-password
+            persistence:
+              enabled: false
+            resources:
+              requests: {cpu: 50m, memory: 192Mi}
+              limits: {memory: 384Mi}
+            sidecar:
+              dashboards:
+                enabled: true
+                label: grafana_dashboard
+                searchNamespace: ALL
+              datasources:
+                # exemplar links on the default Prometheus datasource -> Tempo
+                exemplarTraceIdDestinations:
+                  datasourceUid: tempo
+                  traceIdLabelName: trace_id
+            additionalDataSources:
+              - name: Loki
+                type: loki
+                uid: loki
+                access: proxy
+                url: http://loki-gateway.monitoring.svc.cluster.local
+                jsonData:
+                  derivedFields:
+                    - name: TraceID
+                      matcherRegex: '"trace_id":"(\w+)"'
+                      url: "$${__value.raw}"
+                      datasourceUid: tempo
+              - name: Tempo
+                type: tempo
+                uid: tempo
+                access: proxy
+                url: http://tempo.monitoring.svc.cluster.local:3100
+                jsonData:
+                  tracesToLogsV2:
+                    datasourceUid: loki
+                    spanStartTimeShift: -5m
+                    spanEndTimeShift: 5m
+                    filterByTraceID: true
+                  serviceMap:
+                    datasourceUid: prometheus
+                  nodeGraph:
+                    enabled: true
+          kube-state-metrics:
+            enabled: true
+            resources:
+              requests: {cpu: 20m, memory: 64Mi}
+              limits: {memory: 128Mi}
+          prometheus-node-exporter:
+            enabled: true
+            resources:
+              requests: {cpu: 20m, memory: 32Mi}
+              limits: {memory: 64Mi}
+          # kube-proxy-free Cilium cluster — no kube-proxy to scrape
+          kubeProxy:
+            enabled: false
+          # Talos binds these to localhost — not scrapeable
+          kubeScheduler:
+            enabled: false
+          kubeControllerManager:
+            enabled: false
+          kubeEtcd:
+            enabled: false
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: observability/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,31 @@
+# PDBs: API/frontend guarantee one survivor during drains; redis allows movement
+# (single replica — blocking it would deadlock node drains). CNPG manages its own PDB.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: ks-api}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ks-frontend
+  namespace: kubeshowcase
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: ks-frontend}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis
+  namespace: kubeshowcase
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: {app: redis}

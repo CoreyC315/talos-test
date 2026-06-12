@@ -1,0 +1,12 @@
+apiVersion: viaduct.ai/v1
+kind: ksops
+metadata:
+  name: observability-secrets
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ksops
+files:
+  - loki-minio.sops.yaml
+  - tempo-minio.sops.yaml
+  - grafana-admin.sops.yaml

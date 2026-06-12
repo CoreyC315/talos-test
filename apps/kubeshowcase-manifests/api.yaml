@@ -1,0 +1,146 @@
+# ks-api: Argo Rollouts CANARY with automated Prometheus analysis + rollback.
+# ReplicaSet-based canary weights (no mesh needed) — 25% -> analysis -> 50% -> analysis -> 100%.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+  labels: {app: ks-api}
+  annotations:
+    reloader.stakater.com/auto: "true" # roll pods when ks-config / ks-sops-demo change
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: {app: ks-api}
+  strategy:
+    canary:
+      maxSurge: 1
+      maxUnavailable: 0
+      steps:
+        - setWeight: 34
+        - pause: {duration: 60s}
+        - analysis:
+            templates:
+              - templateName: api-health
+        - setWeight: 67
+        - pause: {duration: 60s}
+        - analysis:
+            templates:
+              - templateName: api-health
+  template:
+    metadata:
+      labels: {app: ks-api}
+    spec:
+      serviceAccountName: ks-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: ks-api}
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: ks-api}
+      initContainers:
+        # Migration gate: blocks app start until CNPG is reachable and schema applied
+        - name: migrate
+          image: ghcr.io/coreyc315/ks-api:1.0.0
+          args: [migrate]
+          envFrom:
+            - configMapRef: {name: ks-config}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: ks-db-app, key: uri}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {memory: 64Mi}
+      containers:
+        - name: api
+          image: ghcr.io/coreyc315/ks-api:1.0.0
+          ports:
+            - {containerPort: 8080, name: http}
+          envFrom:
+            - configMapRef: {name: ks-config}
+            - secretRef: {name: ks-sops-demo}     # SOPS-in-Git secret
+            - secretRef: {name: ks-vault-secret, optional: true} # ESO/Vault runtime secret
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: ks-db-app, key: uri} # CNPG-generated app credentials
+            - name: OTEL_SERVICE_NAME
+              value: ks-api
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+          resources:
+            requests: {cpu: 100m, memory: 64Mi}
+            limits: {cpu: "1", memory: 192Mi}
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+  labels: {app: ks-api}
+spec:
+  selector: {app: ks-api}
+  ports:
+    - {port: 8080, targetPort: http, name: http}
+---
+# AnalysisTemplate: canary aborts + auto-rollback if error rate >5% or p95 >500ms
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-health
+  namespace: kubeshowcase
+spec:
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 3
+      successCondition: result[0] < 0.05
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_requests_total{namespace="kubeshowcase",status=~"5.."}[2m]))
+            /
+            clamp_min(sum(rate(http_requests_total{namespace="kubeshowcase"}[2m])), 1e-10)
+    - name: p95-latency
+      interval: 30s
+      count: 3
+      successCondition: result[0] < 0.5
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="kubeshowcase"}[2m])) by (le))
+            or vector(0)

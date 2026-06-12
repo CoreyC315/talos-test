@@ -1,0 +1,61 @@
+# ks-worker: KEDA-scaled (Redis list length), scale-to-zero event-driven worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ks-worker
+  namespace: kubeshowcase
+  labels: {app: ks-worker}
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: 0 # KEDA owns the replica count (scale-to-zero)
+  selector:
+    matchLabels: {app: ks-worker}
+  template:
+    metadata:
+      labels: {app: ks-worker}
+    spec:
+      serviceAccountName: ks-worker
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: worker
+          image: ghcr.io/coreyc315/ks-worker:1.0.0
+          ports:
+            - {containerPort: 9090, name: metrics}
+          envFrom:
+            - configMapRef: {name: ks-config}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: ks-worker
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {cpu: 500m, memory: 96Mi}
+          startupProbe:
+            httpGet: {path: /healthz, port: metrics}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: metrics}
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ks-worker
+  namespace: kubeshowcase
+  labels: {app: ks-worker}
+spec:
+  selector: {app: ks-worker}
+  ports:
+    - {port: 9090, targetPort: metrics, name: metrics}

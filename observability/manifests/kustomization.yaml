@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# NOTE: no global namespace here on purpose — the hubble HTTPRoute must live in
+# kube-system (backend namespace); each resource sets its namespace explicitly.
+generators:
+  - ksops-generator.yaml
+resources:
+  - httproute-grafana.yaml
+  - httproute-hubble.yaml
+  - prometheusrules.yaml

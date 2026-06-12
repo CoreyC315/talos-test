@@ -1,0 +1,22 @@
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vault-kv
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+    # CRD comes from the external-secrets chart (wave 5); don't fail dry-run before it exists
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  provider:
+    vault:
+      server: http://vault.vault.svc:8200
+      path: kubeshowcase
+      version: v2
+      auth:
+        kubernetes:
+          mountPath: kubernetes
+          role: eso-reader
+          # Cluster-scoped store: serviceAccountRef requires an explicit namespace
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: tempo-minio
+    namespace: monitoring
+type: Opaque
+stringData:
+    AWS_ACCESS_KEY_ID: ENC[AES256_GCM,data:vo2Ji/WXwU2ah2D66ks1sIdF,iv:otwxUKUu5x66p9ugtHljMR6/VzRfh4FeBkgKj2F2gB8=,tag:MoRgl3f5AKYM2qvgtmPwgQ==,type:str]
+    AWS_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:JAa9UlTvkg6R751aqEhCrP2qukOj+V7X5DSJAnFFD+dvUwqHWVeUdQ==,iv:szAOlxooYg4TQKgUJN/qB130YXMPK5QNzoseaFFG+/E=,tag:Xltq7nLDLGUGHOL9/2+49g==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBCZEZuSWlWd01aSkhoQlNt
+            cFB1RUo4T3FmRGtITGJydVp3T0F3UVh3UFRJCk5QYk12elBKem1EYzRna1FJSmd5
+            eGlPTUFMeGhUejFvRlF0bkVSMENZREUKLS0tIHFJbVdwZjJGOGRGTDliRUd6UGRB
+            V3NiVXRPZ3FNQy82ZUFvNDJVK0diSmcKLkgLU9OUSGejfPoHiFXtIiDUKd+Xh+9y
+            S9M6SFNixK1zv9V8S9XXGB74wFaeAYoZXEYRtvKVPOkHEpgOXFTkoQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:29:52Z"
+    mac: ENC[AES256_GCM,data:3QanADj4Snh2keTSCkWKaa1TcKoolMZNzphh31fo0u8d+hjF4XU6zej90p6Stk/PgahZ6GA40wl+4sGm9lWZdWZrDujeCXAhigUQWQtkYDYuwvFoZzpMbyb8yBOIR/8SyJvafUUmY5poRW0bj4Ox98gc6qinzd4bJQbkliGWl3A=,iv:vtAyIkJuPRQJh8cl4FHXEvDZBuSywOAwoi0ReqmvlcY=,tag:X+XuEHo31D94mtgF4zMdwQ==,type:str]
+    version: 3.13.1

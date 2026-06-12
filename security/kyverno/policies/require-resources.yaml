@@ -1,0 +1,53 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resources
+  annotations:
+    policies.kyverno.io/title: Require Resource Requests
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      On a RAM-tight cluster the scheduler can only do its job if every
+      container declares CPU and memory requests. This policy requires
+      resources.requests.cpu and resources.requests.memory on all containers.
+spec:
+  validationFailureAction: Audit # flip to Enforce later
+  background: true
+  rules:
+    - name: require-cpu-memory-requests
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - longhorn-system
+                - kyverno
+                - falco
+                - spegel
+                - monitoring
+                - argocd
+                - cert-manager
+                - minio
+                - vault
+                - external-secrets
+                - trivy-system
+                - gateway
+      validate:
+        message: "CPU and memory resource requests are required for all containers."
+        pattern:
+          spec:
+            =(initContainers):
+              - resources:
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"
+            containers:
+              - resources:
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"

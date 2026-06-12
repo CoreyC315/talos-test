@@ -1,0 +1,218 @@
+# Zero-trust networking for the app namespace: default-deny BOTH directions,
+# then explicit L3/L4 allows, with L7 HTTP rules on the API (Cilium eBPF + Envoy).
+# Watch verdicts live in Hubble UI: green=allowed by these rules, red=dropped by default-deny.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kubeshowcase
+spec:
+  description: Default-deny ingress+egress for every pod in the namespace
+  endpointSelector: {}
+  ingress: []
+  egress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: kubeshowcase
+spec:
+  description: Every pod may resolve DNS (kube-dns only), with DNS visibility
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - {port: "53", protocol: ANY}
+          rules:
+            dns:
+              - matchPattern: "*"
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend
+  namespace: kubeshowcase
+spec:
+  description: Frontend serves static assets to the Gateway; no egress at all (SPA calls API via browser)
+  endpointSelector:
+    matchLabels: {app: ks-frontend}
+  ingress:
+    - fromEntities:
+        - ingress # Cilium's Envoy (Gateway API listener)
+      toPorts:
+        - ports:
+            - {port: "8080", protocol: TCP}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: api
+  namespace: kubeshowcase
+spec:
+  description: |
+    L7 exhibit: Gateway may only call the API's known HTTP surface; Prometheus may scrape
+    /metrics. Anything else (e.g. DELETE, /admin) is rejected at L7 by Envoy, visible in Hubble.
+  endpointSelector:
+    matchLabels: {app: ks-api}
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - {port: "8080", protocol: TCP}
+          rules:
+            http:
+              - {method: GET, path: "/api/.*"}
+              - {method: POST, path: "/api/.*"}
+              - {method: GET, path: "/healthz"}
+              - {method: GET, path: "/readyz"}
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - {port: "8080", protocol: TCP}
+          rules:
+            http:
+              - {method: GET, path: "/metrics"}
+  egress:
+    - toEndpoints:
+        - matchLabels: {cnpg.io/cluster: ks-db}
+      toPorts:
+        - ports:
+            - {port: "5432", protocol: TCP}
+    - toEndpoints:
+        - matchLabels: {app: redis}
+      toPorts:
+        - ports:
+            - {port: "6379", protocol: TCP}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - {port: "4317", protocol: TCP} # OTLP traces -> Alloy
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: worker
+  namespace: kubeshowcase
+spec:
+  description: Worker consumes Redis jobs, exports traces + metrics
+  endpointSelector:
+    matchLabels: {app: ks-worker}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - {port: "9090", protocol: TCP}
+  egress:
+    - toEndpoints:
+        - matchLabels: {app: redis}
+      toPorts:
+        - ports:
+            - {port: "6379", protocol: TCP}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - {port: "4317", protocol: TCP}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redis
+  namespace: kubeshowcase
+spec:
+  description: Only the API and worker may touch Redis
+  endpointSelector:
+    matchLabels: {app: redis}
+  ingress:
+    - fromEndpoints:
+        - matchLabels: {app: ks-api}
+        - matchLabels: {app: ks-worker}
+      toPorts:
+        - ports:
+            - {port: "6379", protocol: TCP}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: postgres
+  namespace: kubeshowcase
+spec:
+  description: |
+    CNPG pods: API + CronJob may query; replicas replicate from each other; the CNPG
+    operator must reach the instance manager (8000); pods need K8s API + MinIO (WAL/backup).
+  endpointSelector:
+    matchLabels: {cnpg.io/cluster: ks-db}
+  ingress:
+    - fromEndpoints:
+        - matchLabels: {app: ks-api}
+        - matchLabels: {app: ks-pgdump}
+        - matchLabels: {cnpg.io/cluster: ks-db}
+      toPorts:
+        - ports:
+            - {port: "5432", protocol: TCP}
+    - fromEndpoints:
+        - matchLabels: {cnpg.io/cluster: ks-db}
+      toPorts:
+        - ports:
+            - {port: "5432", protocol: TCP}
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cnpg-system
+      toPorts:
+        - ports:
+            - {port: "8000", protocol: TCP}
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - {port: "9187", protocol: TCP} # postgres exporter metrics
+  egress:
+    - toEntities:
+        - kube-apiserver # CNPG instance manager watches its Cluster resource
+    - toEndpoints:
+        - matchLabels: {cnpg.io/cluster: ks-db}
+      toPorts:
+        - ports:
+            - {port: "5432", protocol: TCP}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: minio
+      toPorts:
+        - ports:
+            - {port: "9000", protocol: TCP} # WAL archive + base backups
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: pgdump-cronjob
+  namespace: kubeshowcase
+spec:
+  description: Nightly pg_dump job talks to Postgres and MinIO only
+  endpointSelector:
+    matchLabels: {app: ks-pgdump}
+  egress:
+    - toEndpoints:
+        - matchLabels: {cnpg.io/cluster: ks-db}
+      toPorts:
+        - ports:
+            - {port: "5432", protocol: TCP}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: minio
+      toPorts:
+        - ports:
+            - {port: "9000", protocol: TCP}

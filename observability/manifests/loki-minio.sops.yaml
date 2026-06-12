@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: loki-minio
+    namespace: monitoring
+type: Opaque
+stringData:
+    AWS_ACCESS_KEY_ID: ENC[AES256_GCM,data:0fZ6n/enfG+79g8zlCji9WCb,iv:Vf8+EzY+q0MQh7hmwBXN2NImtZqu+K2wIR8whKZ+NXk=,tag:VOqVavaGD7bBFYUUexoI/w==,type:str]
+    AWS_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:9Gh0LWGntSlKtOv7bjYfWPcpIs8/2uvL2307GuTxsCzW/sF8nz1lzQ==,iv:ERiYwsaSDRBh0QFpZ+IFrdEfcPNkXF+oi4WcklNd2q4=,tag:TChHDgfbG6HfRJuLMtC1ww==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAwYVo4bENjR0xvaXNFd1d6
+            WEQ0T1JWd2N0M01Qa2hZRjhMbi9UcWlEWlZ3CkpRM25xMjM2Y2tpdXJkSi9hejBX
+            NEYwUlB2VlorQU9nbjN6N1JBbHpIMjQKLS0tIHZaY2Rxam9RdWlTZE1vM3hlOWQw
+            QUgwNXVrSzZjTllQYU5nb0NCR1dvdm8KFBLgs0/8NVqgXodcdmoYu/Gt2c60MBjo
+            k57R1q3c6+3QXGCp+xh7ykas131REVo/8IfD+RxEgQPZonxHEEx0qA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:29:52Z"
+    mac: ENC[AES256_GCM,data:VJtvhj5/Wp01J1GEfOBrjWPxR4Dp1EkuHmn9VzdRQ55GhAZmne/NZYJJ0FlnVF0XPOLMdnm3/P3rYKpVbP7QGp7hJAoYgxAToR6oSv6YDWkBR41I67QczGX3fWhF6eA9YGHNpQ0kBM8EPpzh3NAQZa3kYUkgRG5u7UvfoglOdX0=,iv:z6+eFyy/k61RO4DgYivnXXds/OfqXDh1dJsBWGZvm7Y=,tag:+9i2G5dB11TwMCurFRL7JA==,type:str]
+    version: 3.13.1

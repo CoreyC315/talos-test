@@ -1,0 +1,51 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-probes
+  annotations:
+    policies.kyverno.io/title: Require Liveness and Readiness Probes
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Long-running workloads (Deployments and StatefulSets) must define both
+      liveness and readiness probes so failures are detected and traffic is
+      only routed to ready pods.
+spec:
+  validationFailureAction: Audit # flip to Enforce later
+  background: true
+  rules:
+    - name: require-liveness-readiness
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - StatefulSet
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - longhorn-system
+                - kyverno
+                - falco
+                - spegel
+                - monitoring
+                - argocd
+                - cert-manager
+                - minio
+                - vault
+                - external-secrets
+                - trivy-system
+                - gateway
+      validate:
+        message: "Liveness and readiness probes are required for all containers."
+        pattern:
+          spec:
+            template:
+              spec:
+                containers:
+                  - livenessProbe:
+                      periodSeconds: ">0"
+                    readinessProbe:
+                      periodSeconds: ">0"

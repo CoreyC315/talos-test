@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: default
+  source:
+    repoURL: https://kedacore.github.io/charts
+    chart: keda
+    targetRevision: 2.20.1
+    helm:
+      releaseName: keda
+      valuesObject:
+        resources:
+          operator:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 384Mi}
+          metricServer:
+            requests: {cpu: 25m, memory: 96Mi}
+            limits: {memory: 256Mi}
+          webhooks:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 96Mi}
+        prometheus:
+          operator:
+            enabled: false # flipped on by Observe tier follow-up
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

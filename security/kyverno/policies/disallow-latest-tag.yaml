@@ -1,0 +1,77 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Mutable image tags make rollbacks and audits impossible. This policy
+      requires every image to specify a tag, and that tag must not be `latest`.
+spec:
+  validationFailureAction: Audit # flip to Enforce later
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - longhorn-system
+                - kyverno
+                - falco
+                - spegel
+                - monitoring
+                - argocd
+                - cert-manager
+                - minio
+                - vault
+                - external-secrets
+                - trivy-system
+                - gateway
+      validate:
+        message: "An explicit image tag is required."
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "*:*"
+            containers:
+              - image: "*:*"
+    - name: disallow-latest
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - longhorn-system
+                - kyverno
+                - falco
+                - spegel
+                - monitoring
+                - argocd
+                - cert-manager
+                - minio
+                - vault
+                - external-secrets
+                - trivy-system
+                - gateway
+      validate:
+        message: "Using the mutable 'latest' image tag is not allowed."
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "!*:latest"
+            containers:
+              - image: "!*:latest"

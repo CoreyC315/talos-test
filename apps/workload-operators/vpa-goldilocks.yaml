@@ -1,0 +1,72 @@
+# VPA (recommender+updater+admission) + Goldilocks dashboard reading VPA recommendations.
+# k8s 1.35 has in-place pod resize GA-track; VPA mode InPlaceOrRecreate exercises it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpa
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.fairwinds.com/stable
+    chart: vpa
+    targetRevision: 4.7.2
+    helm:
+      releaseName: vpa
+      valuesObject:
+        recommender:
+          resources:
+            requests: {cpu: 25m, memory: 96Mi}
+            limits: {memory: 256Mi}
+        updater:
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {memory: 192Mi}
+        admissionController:
+          enabled: true
+          resources:
+            requests: {cpu: 25m, memory: 48Mi}
+            limits: {memory: 128Mi}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpa
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: goldilocks
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.fairwinds.com/stable
+      chart: goldilocks
+      targetRevision: 10.4.0
+      helm:
+        releaseName: goldilocks
+        valuesObject:
+          controller:
+            resources:
+              requests: {cpu: 25m, memory: 96Mi}
+              limits: {memory: 256Mi}
+          dashboard:
+            replicaCount: 1
+            resources:
+              requests: {cpu: 10m, memory: 64Mi}
+              limits: {memory: 160Mi}
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: platform/goldilocks
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: goldilocks
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true]

@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-adapter
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: prometheus-adapter
+      targetRevision: 5.3.0
+      helm:
+        releaseName: prometheus-adapter
+        valuesObject:
+          replicas: 1
+          prometheus:
+            url: http://kube-prometheus-stack-prometheus.monitoring.svc
+            port: 9090
+          resources:
+            requests: {memory: 64Mi}
+            limits: {memory: 128Mi}
+          rules:
+            custom:
+              - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
+                resources:
+                  overrides:
+                    namespace: {resource: namespace}
+                    pod: {resource: pod}
+                name:
+                  matches: "^(.*)_total$"
+                  as: "http_requests_per_second"
+                metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

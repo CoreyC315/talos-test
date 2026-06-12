@@ -1,0 +1,96 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: 7.0.0
+      helm:
+        releaseName: loki
+        valuesObject:
+          # RAM-constrained tier decision: SingleBinary, caches off (14GB total RAM)
+          deploymentMode: SingleBinary
+          loki:
+            auth_enabled: false
+            commonConfig:
+              replication_factor: 1
+            schemaConfig:
+              configs:
+                - from: "2024-04-01"
+                  store: tsdb
+                  object_store: s3
+                  schema: v13
+                  index:
+                    prefix: index_
+                    period: 24h
+            storage:
+              type: s3
+              bucketNames:
+                chunks: loki-chunks
+                ruler: loki-ruler
+              s3:
+                endpoint: http://minio.minio.svc.cluster.local:9000
+                region: homelab
+                accessKeyId: ${AWS_ACCESS_KEY_ID}
+                secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+                s3ForcePathStyle: true
+                insecure: true
+            limits_config:
+              retention_period: 72h
+            compactor:
+              retention_enabled: true
+              delete_request_store: s3
+          singleBinary:
+            replicas: 1
+            persistence:
+              enabled: true
+              storageClass: longhorn
+              size: 10Gi
+            resources:
+              requests: {cpu: 100m, memory: 384Mi}
+              limits: {memory: 768Mi}
+            extraArgs:
+              - -config.expand-env=true
+            extraEnvFrom:
+              - secretRef:
+                  name: loki-minio
+          # Zero out simple-scalable targets
+          backend:
+            replicas: 0
+          read:
+            replicas: 0
+          write:
+            replicas: 0
+          gateway:
+            enabled: true
+            replicas: 1
+            resources:
+              requests: {cpu: 10m, memory: 64Mi}
+              limits: {memory: 64Mi}
+          ruler:
+            enabled: false
+          # memcached eats RAM — off
+          chunksCache:
+            enabled: false
+          resultsCache:
+            enabled: false
+          lokiCanary:
+            enabled: false
+          test:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

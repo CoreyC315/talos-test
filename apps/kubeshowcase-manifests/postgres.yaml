@@ -1,0 +1,52 @@
+# CloudNativePG: HA Postgres with streaming replication + WAL archiving + scheduled
+# base backups to MinIO. The operator manages resources — VPA deliberately NOT pointed here.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: ks-db
+  namespace: kubeshowcase
+spec:
+  instances: 2 # primary + 1 streaming replica (RAM budget; CNPG handles failover)
+  primaryUpdateStrategy: unsupervised
+  storage:
+    storageClass: longhorn
+    size: 5Gi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 768Mi}
+  postgresql:
+    parameters:
+      max_connections: "60"
+      shared_buffers: 64MB
+  bootstrap:
+    initdb:
+      database: ks
+      owner: ks
+  backup:
+    retentionPolicy: 7d
+    barmanObjectStore:
+      destinationPath: s3://cnpg-backups/ks-db
+      endpointURL: http://minio.minio.svc.cluster.local:9000
+      s3Credentials:
+        accessKeyId:
+          name: cnpg-minio
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: cnpg-minio
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip
+  monitoring:
+    enablePodMonitor: true
+---
+# Nightly CNPG base backup (in addition to continuous WAL archiving)
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: ks-db-nightly
+  namespace: kubeshowcase
+spec:
+  schedule: "0 0 4 * * *" # CNPG uses 6-field cron (with seconds)
+  cluster:
+    name: ks-db
+  backupOwnerReference: self

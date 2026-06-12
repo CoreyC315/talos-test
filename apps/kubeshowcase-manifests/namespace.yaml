@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubeshowcase
+  labels:
+    # The ONLY app namespace — Pod Security 'restricted' fully enforced
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    goldilocks.fairwinds.com/enabled: "true" # VPA recommendations dashboard

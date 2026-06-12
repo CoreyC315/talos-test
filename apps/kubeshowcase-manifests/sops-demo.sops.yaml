@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: ks-sops-demo
+    namespace: kubeshowcase
+type: Opaque
+stringData:
+    FEATURE_BANNER: ENC[AES256_GCM,data:t0u/nfA+FkYVfzoKpTlpcIxoBQYF1vCSy6IZY3aw4sWNWymmg8UC,iv:scqCRCDUOQCFsbPRr5CrBO4tteYIHJI9/6z85lFFbpk=,tag:z7jahchEl6+CVuiOlVoH2w==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA5enZua0Ezd1NTUHlpbldJ
+            QWlmaDVIY0wwZHA2TkFacnNwdzBxZEp1cEZBCkEyaEFnR3lUZ01YVEpKblQ0UTZo
+            MnFSOTczYi8rSUJiMVNUZnFWYmpUUFkKLS0tIEo3amZzSERkdmhPdG04QUowYkFr
+            UjVObjJnb291bGdDUlZ0VzlCVkJtcDAK4j8Su5Lo0nkdfa5X+/1FaIsaN6IUY9EV
+            HVhBocfbedNLf0cLl7Y/EPayU6IctAGb6qCjQM2epSmsouDJZuaBEg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:35:11Z"
+    mac: ENC[AES256_GCM,data:C19y52Odyt3Ixa+HEAzrT3k6TAt2fGd8CIVmUiz+rvowtnk+nT5TcFaIhrP+IvFyKc+7Do4ixfU55+sOhkEGHFjnsET4XmUIhnOk55fQBA+QSX2KU0sKJtaF2LckXUK2AzvFjBs8QQLihygX8ofYbg9+9W9B0zICRjVCMC4/w3Y=,iv:L9O8Oo/eJqJSQtYFI9XA3yZV0RDlg8wVTYzMVHR7jPw=,tag:vYdUQKClMxDMduI0XB65pw==,type:str]
+    version: 3.13.1

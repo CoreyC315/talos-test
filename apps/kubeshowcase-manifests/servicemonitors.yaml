@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+spec:
+  selector:
+    matchLabels: {app: ks-api}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ks-worker
+  namespace: kubeshowcase
+spec:
+  selector:
+    matchLabels: {app: ks-worker}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

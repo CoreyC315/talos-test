@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-longhorn
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  longhorn.json: |
+    {
+      "uid": "longhorn",
+      "title": "Longhorn",
+      "schemaVersion": 39,
+      "tags": ["homelab", "storage"],
+      "time": {"from": "now-6h", "to": "now"},
+      "refresh": "1m",
+      "panels": [
+        {
+          "id": 1, "type": "timeseries", "title": "Volume Actual Size",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "longhorn_volume_actual_size_bytes", "legendFormat": "{{volume}}"}
+          ]
+        },
+        {
+          "id": 2, "type": "timeseries", "title": "Volume State (1=attached/healthy per state label)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "longhorn_volume_state", "legendFormat": "{{volume}}"}
+          ]
+        },
+        {
+          "id": 3, "type": "timeseries", "title": "Node Storage Usage",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+          "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "longhorn_node_storage_usage_bytes", "legendFormat": "{{node}}"}
+          ]
+        }
+      ]
+    }

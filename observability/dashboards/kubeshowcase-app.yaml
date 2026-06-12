@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-kubeshowcase-app
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  kubeshowcase-app.json: |
+    {
+      "uid": "kubeshowcase-app",
+      "title": "KubeShowcase App",
+      "schemaVersion": 39,
+      "tags": ["homelab", "kubeshowcase"],
+      "time": {"from": "now-6h", "to": "now"},
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1, "type": "timeseries", "title": "HTTP Requests/s by Path",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "sum by (path) (rate(http_requests_total{namespace=\"kubeshowcase\"}[5m]))", "legendFormat": "{{path}}"}
+          ]
+        },
+        {
+          "id": 2, "type": "timeseries", "title": "HTTP Request Duration p95",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"kubeshowcase\"}[5m])))", "legendFormat": "p95"}
+          ]
+        },
+        {
+          "id": 3, "type": "timeseries", "title": "HPA Replicas (api)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"kubeshowcase\"}", "legendFormat": "{{horizontalpodautoscaler}} current"},
+            {"refId": "B", "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"kubeshowcase\"}", "legendFormat": "{{horizontalpodautoscaler}} max"}
+          ]
+        },
+        {
+          "id": 4, "type": "timeseries", "title": "KEDA Worker Replicas",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "kube_deployment_status_replicas{deployment=\"ks-worker\",namespace=\"kubeshowcase\"}", "legendFormat": "ks-worker replicas"}
+          ]
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "Redis Queue Depth",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "redis_queue_depth", "legendFormat": "queue depth"}
+          ]
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "Worker Jobs Processed/s",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+          "targets": [
+            {"refId": "A", "expr": "sum(rate(worker_jobs_processed_total{namespace=\"kubeshowcase\"}[5m]))", "legendFormat": "jobs/s"}
+          ]
+        }
+      ]
+    }

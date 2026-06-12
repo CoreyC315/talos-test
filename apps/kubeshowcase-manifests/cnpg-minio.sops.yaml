@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: cnpg-minio
+    namespace: kubeshowcase
+type: Opaque
+stringData:
+    ACCESS_KEY_ID: ENC[AES256_GCM,data:jzhFMmX5qv/pHfr8PqGwSnh5,iv:lJ7rEZiZMUO/mnUs6KL8q4dAXYadYIyZY/zaF+fZhZA=,tag:sq2CP2prWp1U/izElcYVVw==,type:str]
+    ACCESS_SECRET_KEY: ENC[AES256_GCM,data:GLP0qA8iHtlWxTL1PyuTtlQScyQJaKABW9Cy8rWeAp+u/8U9tYW99w==,iv:wUaO2UT7c+ZuqeEIgCfAtDUdevR1shrw2R1CZMvuPmc=,tag:jcGSe/+CGU9x71fpc6XTZA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBONkFNSG9xUlgxai9CNXkr
+            aVE3VGl5ckhrem5NK2NHRzJSVjlvZVBBMHl3CnRFTGpKcitKK2RaTUZPUlRJRS80
+            Z3A0WHY2SVZZME9YdCtvMDlWZTg3L2MKLS0tICtXTk1zejduTkluNWY4c05LdU1k
+            UUFIbGl2STNoNGpyOWFtNjNYcC83clEK/zIfT4kDcaAtPnUI7jw1HoFxEBywmg6V
+            HEeP1nbthIiX8Ms8RK0jwAh1lkymLa83Q+e/R6evHO32BYYOj05qmw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:35:11Z"
+    mac: ENC[AES256_GCM,data:jZT3XGU71j/qAnhGDxLeUciVu3lxQHzHGhcckFVIkvu+Cf8FocvjuFeiQBpbeyz5hajl9nrope/Qp9wwMsq+wgJgmJ8Hdx4UfmDRt+rBpzeDNyqwGCkD9x1CYb68ceyz0NJs41s8WXaQdgF5aWcNrq9IoAgWgsn+TirR8VJRWIs=,iv:tlyi6ebRaEsH9BeS3AAR7KYoRsw5m293q8kz3FaVJzA=,tag:gRFkOHYNDNdHPnaStK2cTg==,type:str]
+    version: 3.13.1

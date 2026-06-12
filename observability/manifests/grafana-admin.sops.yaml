@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: grafana-admin
+    namespace: monitoring
+type: Opaque
+stringData:
+    admin-user: ENC[AES256_GCM,data:NV1ZFoU=,iv:NhThr5tRiDVvrWaTND+7pAZtsG5RhpGJe7z+4mN+PVM=,tag:svOT+TycWAz0/NN3OC5cRw==,type:str]
+    admin-password: ENC[AES256_GCM,data:PA2dFrxKNQQl/iE/m7U9XqMXcB0CMcpn,iv:ru2iyA4/55LDkpe5azunhiTO4BPpBjFh5Tj3Sed6ZN8=,tag:1WbsrILBMDqXdKctI1SiPg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA4Q2JtalpHak15N2l1OThU
+            SCs4MXZybU9hZ1pmT2lGalF3WEJ1UkNuQ1E0CmJwZ0dPblFKdDROQzFOU1p4bU1m
+            RzkyOEl6am1FWDA1ZDNzazJ2c29ENDAKLS0tIHpvdVViY0FydVVDeDdoOGw1aDBw
+            K2MwSG5lOVRzeXpkaTJaak9OV2xpL1UKTn6tSCczhXcWLmfrhw9ngtrjSQFHxdBP
+            V9rLXT4dSY9kzVnH78pcTrCj2zZJYdtc7v8r6uVMFreagYuk/JJu7g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vth2pqfhwztatwtae4zseqz6u0nz87tvzr07z0rmh34qvkzsxfuskyp883
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-06-12T23:29:52Z"
+    mac: ENC[AES256_GCM,data:fAxJsMRy7lUzlRTm32QAJutKEVpAuFsVsuTDMCgI5s/iNYJKz7SGPRA/ndrUWSbineIwfmqSZdSidXxOdTr9nf0fR+RCdxfIDT1PGzLbaYNUQPXRWP4QpsacIxkMM2MO7s4605Ej8JtxfL6wDERliDIGp/TNOU7mxkwvUAtfxoA=,iv:XuO0vLv3tf3KdIjH3auekS9l3km5nXYqkDYRinlRb00=,tag:gAyIi7SaDPQuBCv+3EUL+A==,type:str]
+    version: 3.13.1

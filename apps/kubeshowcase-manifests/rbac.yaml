@@ -1,0 +1,46 @@
+# Least-privilege RBAC exhibit: the API's ServiceAccount can read exactly one ConfigMap. Nothing else.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ks-api
+  namespace: kubeshowcase
+automountServiceAccountToken: false # the app itself never calls the K8s API
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ks-worker
+  namespace: kubeshowcase
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ks-frontend
+  namespace: kubeshowcase
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ks-api-config-reader
+  namespace: kubeshowcase
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [ks-config]
+    verbs: [get, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ks-api-config-reader
+  namespace: kubeshowcase
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ks-api-config-reader
+subjects:
+  - kind: ServiceAccount
+    name: ks-api
+    namespace: kubeshowcase

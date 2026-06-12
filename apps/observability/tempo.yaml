@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: tempo
+      targetRevision: 1.24.4
+      helm:
+        releaseName: tempo
+        valuesObject:
+          # RAM-constrained tier decision: monolithic single replica, S3 backend (14GB total RAM)
+          replicas: 1
+          persistence:
+            enabled: false
+          tempo:
+            reportingEnabled: false
+            resources:
+              requests: {cpu: 100m, memory: 384Mi}
+              limits: {memory: 768Mi}
+            extraArgs:
+              config.expand-env: true
+            extraEnvFrom:
+              - secretRef:
+                  name: tempo-minio
+            storage:
+              trace:
+                backend: s3
+                s3:
+                  bucket: tempo-traces
+                  endpoint: minio.minio.svc.cluster.local:9000
+                  region: homelab
+                  insecure: true
+                  forcepathstyle: true
+                  access_key: ${AWS_ACCESS_KEY_ID}
+                  secret_key: ${AWS_SECRET_ACCESS_KEY}
+            receivers:
+              otlp:
+                protocols:
+                  grpc:
+                    endpoint: 0.0.0.0:4317
+                  http:
+                    endpoint: 0.0.0.0:4318
+            metricsGenerator:
+              enabled: true
+              remoteWriteUrl: http://kube-prometheus-stack-prometheus.monitoring.svc:9090/api/v1/write
+            global_overrides:
+              defaults:
+                metrics_generator:
+                  processors:
+                    - service-graphs
+                    - span-metrics
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
