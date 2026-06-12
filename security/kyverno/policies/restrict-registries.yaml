@@ -41,10 +41,10 @@ spec:
       validate:
         message: >-
           Images are only allowed from: docker.io, ghcr.io, quay.io,
-          registry.k8s.io, factory.talos.dev, public.ecr.aws.
+          registry.k8s.io, factory.talos.dev, public.ecr.aws, 192.168.1.28:5000 (in-cluster).
         pattern:
           spec:
             =(initContainers):
-              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/", "192.168.1.28:5000/*"
+              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/* | 192.168.1.28:5000/*"
             containers:
-              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/", "192.168.1.28:5000/*"
+              - image: "docker.io/* | ghcr.io/* | quay.io/* | registry.k8s.io/* | factory.talos.dev/* | public.ecr.aws/* | 192.168.1.28:5000/*"
