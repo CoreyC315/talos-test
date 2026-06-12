@@ -14,3 +14,7 @@ machine:
   nodeLabels:
     topology.kubernetes.io/region: homelab
     topology.kubernetes.io/zone: raiden
+---
+apiVersion: v1alpha1
+kind: HostnameConfig
+$patch: delete
