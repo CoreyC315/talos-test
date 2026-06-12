@@ -1,0 +1,11 @@
+# Talos Image Factory schematic — KubeShowcase cluster
+# Schematic ID: 7d1fa2e0d2d77244e6ab651eb49a9772e2c905c87ae4f1bd5833df1d7832a092
+# ISO:       https://factory.talos.dev/image/7d1fa2e0d2d77244e6ab651eb49a9772e2c905c87ae4f1bd5833df1d7832a092/v1.13.4/metal-amd64.iso
+# Installer: factory.talos.dev/installer/7d1fa2e0d2d77244e6ab651eb49a9772e2c905c87ae4f1bd5833df1d7832a092:v1.13.4
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/iscsi-tools      # Longhorn: iSCSI initiator
+      - siderolabs/util-linux-tools # Longhorn: nsenter et al.
+      - siderolabs/qemu-guest-agent # Proxmox guest integration
+      - siderolabs/intel-ucode      # Hosts are Intel i7-4770

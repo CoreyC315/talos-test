@@ -1,0 +1,16 @@
+machine:
+  network:
+    hostname: cp-1
+    interfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses: [192.168.1.20/24]
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.168.1.1
+        vip:
+          ip: 192.168.1.19
+  nodeLabels:
+    topology.kubernetes.io/region: homelab
+    topology.kubernetes.io/zone: raiden

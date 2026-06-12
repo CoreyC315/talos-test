@@ -1,0 +1,8 @@
+.env
+*.key
+age.key
+talosconfig
+kubeconfig
+secrets.yaml
+talos/clusterconfig/*.yaml
+!talos/clusterconfig/.gitkeep

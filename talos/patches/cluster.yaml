@@ -1,0 +1,11 @@
+# Control-plane-only patch via `--config-patch-control-plane`
+cluster:
+  network:
+    cni:
+      name: none # Cilium installed via GitOps — nodes stay NotReady until then (expected)
+  proxy:
+    disabled: true # Cilium kube-proxy replacement
+  apiServer:
+    certSANs:
+      - 192.168.1.19
+  allowSchedulingOnControlPlanes: false

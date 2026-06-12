@@ -1,0 +1,55 @@
+# Applied to ALL nodes (control plane + workers) via `talosctl gen config --config-patch`
+machine:
+  install:
+    disk: /dev/sda
+    # Image Factory installer — schematic includes iscsi-tools, util-linux-tools,
+    # qemu-guest-agent, intel-ucode (see talos/schematic.yaml)
+    image: factory.talos.dev/installer/7d1fa2e0d2d77244e6ab651eb49a9772e2c905c87ae4f1bd5833df1d7832a092:v1.13.4
+    wipe: false
+  features:
+    kubePrism:
+      enabled: true
+      port: 7445 # Cilium k8sServiceHost/Port target — kube-proxy-free dataplane
+    hostDNS:
+      enabled: true
+      forwardKubeDNSToHost: true
+  kubelet:
+    extraMounts:
+      # Required by Longhorn on Talos (bind-mount its data dir into kubelet)
+      - destination: /var/lib/longhorn
+        type: bind
+        source: /var/lib/longhorn
+        options: [bind, rshared, rw]
+  sysctls:
+    # Observability stack (Loki/Alloy/Grafana) chews through inotify watches
+    fs.inotify.max_user_watches: "1048576"
+    fs.inotify.max_user_instances: "8192"
+    vm.max_map_count: "262144"
+  time:
+    servers: [time.cloudflare.com]
+  network:
+    nameservers: [192.168.1.102, 1.1.1.1] # Pi-hole first, CF fallback
+  # Security exhibit: LUKS2 encryption of STATE + EPHEMERAL, keyed off node UUID
+  systemDiskEncryption:
+    state:
+      provider: luks2
+      keys:
+        - nodeID: {}
+          slot: 0
+    ephemeral:
+      provider: luks2
+      keys:
+        - nodeID: {}
+          slot: 0
+  # Spegel p2p pull-through cache: containerd tries the local mirror first,
+  # falls back to the upstream registry if 127.0.0.1:29999 isn't answering.
+  registries:
+    mirrors:
+      docker.io:
+        endpoints: [http://127.0.0.1:29999]
+      registry.k8s.io:
+        endpoints: [http://127.0.0.1:29999]
+      ghcr.io:
+        endpoints: [http://127.0.0.1:29999]
+      quay.io:
+        endpoints: [http://127.0.0.1:29999]
