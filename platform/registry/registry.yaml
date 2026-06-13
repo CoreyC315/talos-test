@@ -39,7 +39,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: registry
-          image: registry:3.0.0
+          image: docker.io/library/registry:3.0.0
           ports:
             - {containerPort: 5000, name: http}
           env:
