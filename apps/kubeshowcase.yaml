@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/CoreyC315/talos-test.git
     targetRevision: main
-    path: apps/kubeshowcase-manifests
+    path: workloads/kubeshowcase
   destination:
     server: https://kubernetes.default.svc
     namespace: kubeshowcase

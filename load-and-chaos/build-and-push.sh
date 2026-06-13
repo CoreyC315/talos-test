@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
-# Builds + pushes all KubeShowcase images (linux/amd64) and records the digests
-# in apps/kubeshowcase-manifests/images.lock. ghcr.io login required beforehand.
+# Builds all KubeShowcase images (linux/amd64) locally and pushes them to the
+# in-cluster registry (plain HTTP — crane --insecure, no Docker daemon config needed).
+# Records digests in workloads/kubeshowcase/images.lock.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REGISTRY=ghcr.io/coreyc315
+REGISTRY="${REGISTRY:-192.168.1.28:5000}"
 VERSION="${1:-1.0.0}"
-LOCK=apps/kubeshowcase-manifests/images.lock
+LOCK=workloads/kubeshowcase/images.lock
 
 : > "${LOCK}.tmp"
 for comp in api worker frontend pgdump; do
-  img="${REGISTRY}/ks-${comp}:${VERSION}"
-  echo "==> ${img}"
-  docker buildx build --platform linux/amd64 -t "${img}" --push "app-src/${comp}"
-  digest=$(docker buildx imagetools inspect "${img}" --format '{{json .Manifest}}' | jq -r .digest)
-  echo "ks-${comp} ${img}@${digest}" >> "${LOCK}.tmp"
+  ref="${REGISTRY}/ks-${comp}:${VERSION}"
+  echo "==> build ${ref}"
+  docker buildx build --platform linux/amd64 --load -t "${ref}" "app-src/${comp}"
+  tarball=$(mktemp /tmp/ks-img-XXXX.tar)
+  docker save "${ref}" -o "${tarball}"
+  echo "==> push ${ref}"
+  crane push --insecure "${tarball}" "${ref}"
+  rm -f "${tarball}"
+  digest=$(crane digest --insecure "${ref}")
+  echo "ks-${comp} ${ref}@${digest}" >> "${LOCK}.tmp"
 done
 mv "${LOCK}.tmp" "${LOCK}"
-echo "==> digests:"
-cat "${LOCK}"
+echo "==> digests:"; cat "${LOCK}"
