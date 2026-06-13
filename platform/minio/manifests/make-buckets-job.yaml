@@ -1,0 +1,40 @@
+# Reproducible bucket creation (the chart's own post-install hook didn't fire under ArgoCD).
+# ArgoCD PostSync hook: runs after every minio sync, idempotent (mb --ignore-existing).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-make-buckets
+  namespace: minio
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels: {app: minio-make-buckets}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: mc
+          image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: MC_CONFIG_DIR, value: /tmp/.mc}
+            - {name: HOME, value: /tmp}
+            - {name: MINIO_USER, valueFrom: {secretKeyRef: {name: minio-root, key: rootUser}}}
+            - {name: MINIO_PASS, valueFrom: {secretKeyRef: {name: minio-root, key: rootPassword}}}
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -e
+              mc alias set m http://minio.minio.svc.cluster.local:9000 "$MINIO_USER" "$MINIO_PASS"
+              for b in loki-chunks loki-ruler tempo-traces longhorn-backups velero cnpg-backups pg-dumps; do
+                mc mb --ignore-existing m/$b && echo "ok: $b"
+              done

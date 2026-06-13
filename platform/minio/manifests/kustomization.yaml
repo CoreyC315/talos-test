@@ -5,3 +5,4 @@ generators:
   - ksops-generator.yaml
 resources:
   - httproute.yaml
+  - make-buckets-job.yaml
