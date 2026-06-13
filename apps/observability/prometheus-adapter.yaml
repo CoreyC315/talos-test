@@ -19,8 +19,8 @@ spec:
             url: http://kube-prometheus-stack-prometheus.monitoring.svc
             port: 9090
           resources:
-            requests: {memory: 64Mi}
-            limits: {memory: 128Mi}
+            requests: {cpu: 25m, memory: 128Mi}
+            limits: {memory: 320Mi}
           rules:
             custom:
               - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
