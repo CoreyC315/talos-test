@@ -65,7 +65,7 @@ spec:
     kind: Deployment
     name: ks-frontend
   updatePolicy:
-    updateMode: InPlaceOrRecreate # k8s >=1.33 in-place pod resize — "what's new" exhibit
+    updateMode: Auto # this VPA build lacks InPlaceOrRecreate (needs VPA 1.5+); Auto still demos VPA
   resourcePolicy:
     containerPolicies:
       - containerName: frontend
