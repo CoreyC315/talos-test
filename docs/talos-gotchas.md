@@ -76,3 +76,22 @@ child it needed to fix). Classic GitOps deadlock.
 applied ONCE manually with `kubectl patch app longhorn` to break the cycle; Git already has it
 for all future syncs. Lesson: helm lifecycle hooks and Argo CD sync waves are different
 machines — disable chart hooks that assume `helm upgrade` semantics.
+
+## 10. App-of-apps deadlock: editing a child Application's helm valuesObject
+**Symptom:** bumped `prometheus-adapter`'s memory limit in its Application manifest (it was
+OOMKilling at 128Mi), committed + pushed, hard-refreshed, restarted repo-server+redis,
+force-synced — and the live Deployment STUBBORNLY stayed at the old 128Mi. ArgoCD reported
+`Synced` the whole time.
+**Cause:** the repo-server renders a Helm app using the **live `Application` object's**
+`spec.sources[].helm.valuesObject` — NOT the Application YAML in Git directly. That live object
+is itself reconciled by the **root** app-of-apps. Root was stuck `Progressing`, gated on the
+Observe tier (incl. prometheus-adapter) reaching `Healthy` before it would apply the next
+state. So: root won't push the fix until the child is healthy; the child can't be healthy
+without the fix. Deadlock. (Compounded by a stale root *operation* that predated the commit.)
+**Fix:** terminate the stale root operation (`kubectl patch app root --type json -p
+'[{"op":"remove","path":"/operation"}]'`), hard-refresh root, start a fresh root sync — that
+re-applies every child Application spec (now 512Mi) to the live objects. THEN sync the child.
+Live Deployment finally rendered 512Mi and went healthy.
+**Lesson:** when a Helm-via-ArgoCD app ignores a values change, check the *live Application's*
+valuesObject, not just Git. If they differ, the app-of-apps parent hasn't propagated — fix the
+parent, not the child.
