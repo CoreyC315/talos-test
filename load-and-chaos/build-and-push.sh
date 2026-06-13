@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REGISTRY="${REGISTRY:-192.168.1.28:5000}"
+REGISTRY="${REGISTRY:-192.168.1.23:5000}"
 VERSION="${1:-1.0.0}"
 LOCK=workloads/kubeshowcase/images.lock
 

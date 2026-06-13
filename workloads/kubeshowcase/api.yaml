@@ -52,7 +52,7 @@ spec:
       initContainers:
         # Migration gate: blocks app start until CNPG is reachable and schema applied
         - name: migrate
-          image: 192.168.1.28:5000/ks-api:1.0.0
+          image: 192.168.1.23:5000/ks-api:1.0.0
           args: [migrate]
           envFrom:
             - configMapRef: {name: ks-config}
@@ -69,7 +69,7 @@ spec:
             limits: {memory: 64Mi}
       containers:
         - name: api
-          image: 192.168.1.28:5000/ks-api:1.0.0
+          image: 192.168.1.23:5000/ks-api:1.0.0
           ports:
             - {containerPort: 8080, name: http}
           envFrom:

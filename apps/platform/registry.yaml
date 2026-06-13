@@ -17,3 +17,6 @@ spec:
   syncPolicy:
     automated: {prune: true, selfHeal: true}
     syncOptions: [CreateNamespace=true]
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged # registry uses hostPort 5000

@@ -55,6 +55,6 @@ machine:
         endpoints: [http://127.0.0.1:29999, https://ghcr.io]
       quay.io:
         endpoints: [http://127.0.0.1:29999, https://quay.io]
-      # In-cluster app registry (LB .28) — plain HTTP, mirrored explicitly
-      192.168.1.28:5000:
-        endpoints: [http://192.168.1.28:5000]
+      # In-cluster app registry — worker-1 hostPort .23 (physical LAN, robust) — plain HTTP, mirrored explicitly
+      192.168.1.23:5000:
+        endpoints: [http://192.168.1.23:5000]

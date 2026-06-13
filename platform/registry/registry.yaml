@@ -1,18 +1,13 @@
-# In-cluster OCI registry for KubeShowcase app images (LB .28).
-# Why: pushing to ghcr.io requires a PAT with write:packages; the homelab stays
-# self-contained with its own registry. Talos nodes mirror 192.168.1.28:5000 -> http.
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: registry-data
-  namespace: registry
-spec:
-  accessModes: [ReadWriteOnce]
-  storageClassName: longhorn
-  resources:
-    requests:
-      storage: 10Gi
----
+# In-cluster OCI registry for KubeShowcase app images.
+# Why: pushing to ghcr.io needs a PAT with write:packages; this keeps the homelab self-contained.
+#
+# Design (hardened after repeated failures — see docs/talos-gotchas.md):
+#  - Pinned to worker-1 (the aether host; nahida is chronically loaded by a co-tenant k0s VM).
+#  - hostPort 5000 on worker-1's node IP 192.168.1.23 → pulls traverse the PHYSICAL LAN,
+#    bypassing the Cilium pod-overlay (which degrades under nahida's CPU load) AND the
+#    LB-IPAM/L2 indirection. Talos `registries.mirrors` points 192.168.1.23:5000 at plain HTTP.
+#  - hostPath (not Longhorn): the registry is a rebuildable image cache; a local dir on the
+#    pinned node is stable + fast and avoids Longhorn RWO reattach / engine-image races.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,7 +17,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate # RWO volume
+    type: Recreate
   selector:
     matchLabels: {app: registry}
   template:
@@ -30,7 +25,7 @@ spec:
       labels: {app: registry}
     spec:
       nodeSelector:
-        kubernetes.io/hostname: worker-1 # aether host — keep .28 off congested nahida
+        kubernetes.io/hostname: worker-1 # aether host — off congested nahida; stable node IP .23
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -41,7 +36,7 @@ spec:
         - name: registry
           image: docker.io/library/registry:3.0.0
           ports:
-            - {containerPort: 5000, name: http}
+            - {containerPort: 5000, name: http, hostPort: 5000} # node-local pulls via physical LAN
           env:
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
@@ -61,19 +56,18 @@ spec:
             periodSeconds: 10
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: registry-data
+          hostPath:
+            path: /var/lib/ks-registry # Talos EPHEMERAL partition — persists across reboots
+            type: DirectoryOrCreate
 ---
+# ClusterIP kept for in-cluster HTTP access (debugging); node pulls use the hostPort.
 apiVersion: v1
 kind: Service
 metadata:
   name: registry
   namespace: registry
   labels: {app: registry}
-  annotations:
-    lbipam.cilium.io/ips: 192.168.1.28
 spec:
-  type: LoadBalancer
   selector: {app: registry}
   ports:
     - {port: 5000, targetPort: http, name: http}
