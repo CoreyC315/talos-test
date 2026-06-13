@@ -65,3 +65,14 @@ download on first run is slow; pre-`helm repo update` in scripts.)
 - VPA/HPA conflict → VPA targets only the frontend (HPA owns the API, KEDA owns the worker).
 - CNPG self-manages resources → excluded from VPA.
 - etcd quorum → chaos drill only ever kills ONE control-plane node.
+
+## 9. Longhorn's helm pre-upgrade hook deadlocks ArgoCD app-of-apps
+**Symptom:** `longhorn` app stuck `OutOfSync/Missing`, hook Job `longhorn-pre-upgrade` failing
+with `serviceaccount "longhorn-service-account" not found` — and the ROOT app stuck
+"waiting for healthy state of Application/longhorn", which meant the values fix committed to
+Git could not propagate (root applies child Application specs, but root was blocked on the
+child it needed to fix). Classic GitOps deadlock.
+**Fix:** `preUpgradeChecker.jobEnabled: false` (Longhorn's documented setting for ArgoCD/Flux),
+applied ONCE manually with `kubectl patch app longhorn` to break the cycle; Git already has it
+for all future syncs. Lesson: helm lifecycle hooks and Argo CD sync waves are different
+machines — disable chart hooks that assume `helm upgrade` semantics.
