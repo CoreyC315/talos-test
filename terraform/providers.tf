@@ -9,3 +9,17 @@ provider "proxmox" {
     agent = true
   }
 }
+
+# The k8s-layer providers are configured from a kubeconfig FILE that the Talos bootstrap writes
+# during this same apply (terraform/.kubeconfig). Using a static file path (not inline,
+# known-after-apply cluster credentials) lets `terraform plan` succeed on a fresh build — the
+# providers defer connecting until apply, by which point the file (and cluster) exist.
+provider "helm" {
+  kubernetes {
+    config_path = "${path.module}/.kubeconfig"
+  }
+}
+
+provider "kubernetes" {
+  config_path = "${path.module}/.kubeconfig"
+}

@@ -64,6 +64,14 @@ resource "talos_machine_bootstrap" "this" {
   client_configuration = talos_machine_secrets.this.client_configuration
 }
 
+# Ready-to-use talosconfig (talosctl client config) pointing at the control planes + VIP.
+data "talos_client_configuration" "this" {
+  cluster_name         = var.cluster_name
+  client_configuration = talos_machine_secrets.this.client_configuration
+  nodes                = [for k, v in local.control_planes : v.ip]
+  endpoints            = [for k, v in local.control_planes : v.ip]
+}
+
 # Pull the kubeconfig once the cluster is bootstrapped.
 resource "talos_cluster_kubeconfig" "this" {
   depends_on           = [talos_machine_bootstrap.this]

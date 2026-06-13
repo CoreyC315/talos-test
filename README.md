@@ -88,20 +88,20 @@ then add to your trust store (macOS: `sudo security add-trusted-cert -d -k /Libr
 
 ## Reproduce from scratch
 
-### Fast path — Terraform (recommended)
-The whole **substrate** (6 Proxmox VMs at their final sizes + Talos bootstrap → kubeconfig) is
-captured in [`terraform/`](terraform/). One command rebuilds it; the two bootstrap scripts + Argo CD
-do the rest:
+### Fast path — Terraform (recommended): the whole thing in one `apply`
+[`terraform/`](terraform/) rebuilds **everything up to the GitOps handoff** in a single command:
+3 ISOs → 6 Proxmox VMs (final post-incident sizes) → Talos bootstrap → **Cilium** → **Argo CD + root
+app-of-apps**. Argo CD then reconciles every tier from Git.
 ```bash
 cd terraform && cp terraform.tfvars.example terraform.tfvars   # add Proxmox token
-terraform init && terraform apply
-terraform output -raw kubeconfig  > ../talos/clusterconfig/kubeconfig
-terraform output -raw talosconfig > ../talos/clusterconfig/talosconfig
-cd .. && ./bootstrap/01-bootstrap-core.sh && ./bootstrap/02-bootstrap-argocd.sh
+terraform init && terraform apply                              # ~one command; kubeconfig auto-written
+export KUBECONFIG=$PWD/../talos/clusterconfig/kubeconfig
+kubectl -n argocd get applications -w                          # watch the fleet converge
 ```
 `terraform destroy && terraform apply` = clean rebuild. See [terraform/README.md](terraform/README.md)
-for importing the existing cluster vs. a fresh build. The manual/imperative steps below are the
-same operations Terraform automates — kept for reference and for understanding what each layer does.
+for importing the existing cluster vs. a fresh build. The manual/imperative steps below are the same
+operations Terraform automates (the `bootstrap/*.sh` scripts share the tricky Gateway-API prep with
+Terraform so they can't drift) — kept for reference and to understand each layer.
 
 ### Manual path (what Terraform automates)
 1. **Phase 0 — image:** schematic in `talos/schematic.yaml` (ID `7d1fa2e0…2a092`: iscsi-tools,

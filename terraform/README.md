@@ -1,15 +1,20 @@
 # Terraform — Proxmox VMs + Talos bootstrap (the substrate)
 
-This module reproduces the **infrastructure layer** with one command: the 6 Proxmox VMs (with the
-final post-incident CPU/RAM sizes) and the full Talos bootstrap (config gen → apply → etcd
-bootstrap → kubeconfig). Everything *above* this — Cilium, the whole platform, the app — is already
-declarative in Git and arrives via the two `bootstrap/*.sh` scripts + Argo CD.
+This module reproduces **everything up to and including the GitOps handoff** in a single
+`terraform apply`: the 6 Proxmox VMs (final post-incident CPU/RAM sizes), the full Talos
+bootstrap (config gen → apply → etcd bootstrap → kubeconfig), **Cilium**, and **Argo CD + the root
+app-of-apps**. From there Argo CD reconciles every tier from Git.
 
-> Split of responsibility:
-> - **Terraform** = Proxmox VMs + Talos OS bootstrap → a bare, `NotReady` (CNI=none) cluster + kubeconfig.
-> - **`bootstrap/01` + `02` + Argo CD** = Cilium and every tier, reconciled from Git.
+> One apply does: ISOs → 6 VMs → Talos → Gateway-API CRDs (incl. the TLSRoute/Cilium gotcha, via
+> the shared `../bootstrap/00-gateway-api-prep.sh`) → Cilium (helm) → LB-IPAM → sops-age secret →
+> Argo CD (helm) → root Application. Then `kubectl -n argocd get applications` to watch it converge.
 >
-> So a full rebuild is: `terraform apply` → 2 bootstrap scripts → walk away.
+> The standalone `bootstrap/01` + `02` scripts still exist for the no-Terraform path and run the
+> identical steps; the imperative Gateway-API prep is shared so the two can never drift.
+
+How the k8s-layer providers work on a fresh build: `helm`/`kubernetes` are configured from a
+kubeconfig **file** that Talos writes during the apply (`terraform/.kubeconfig`), so `plan`
+succeeds before the cluster exists and connection is deferred to apply.
 
 ## What it captures from the manual build
 - Final VM sizes (Resilience Report Incident 1 & 4): CPs `4c / 6–8 GiB`, worker-1 `6c / 8 GiB`
@@ -25,14 +30,16 @@ declarative in Git and arrives via the two `bootstrap/*.sh` scripts + Argo CD.
 cd terraform
 cp terraform.tfvars.example terraform.tfvars   # add your Proxmox API token
 terraform init
-terraform apply                                 # creates ISOs + 6 VMs + bootstraps Talos
+terraform apply                                 # ISOs + 6 VMs + Talos + Cilium + Argo CD + root app
 
-# hand the credentials to the rest of the repo:
-terraform output -raw kubeconfig  > ../talos/clusterconfig/kubeconfig
-terraform output -raw talosconfig > ../talos/clusterconfig/talosconfig
-
-cd .. && ./bootstrap/01-bootstrap-core.sh && ./bootstrap/02-bootstrap-argocd.sh
+# kubeconfig/talosconfig are written to ../talos/clusterconfig/ automatically. Then:
+export KUBECONFIG=$PWD/../talos/clusterconfig/kubeconfig
+kubectl -n argocd get applications -w           # watch the fleet converge (~10 min)
+../load-and-chaos/build-and-push.sh             # build + push app images to the in-cluster registry
+../security/vault/seed-vault.sh                 # one-time Vault init/unseal + ESO wiring
 ```
+Prereqs on the workstation: `kubectl`, `helm`, and the SOPS **age key** at `~/.config/sops/age/keys.txt`
+(override with `-var age_key_file=...`).
 
 ## Teardown / rebuild
 ```bash

@@ -31,7 +31,7 @@ enabled, agents require the CRD to EXIST.
 **Symptom #3:** installing the old v1alpha2 CRD was denied by gateway-api v1.5's
 `safe-upgrades` ValidatingAdmissionPolicy (downgrade protection). Deleting the VAP raced its
 own admission cache — the first apply after deletion still got denied; second apply worked.
-**Fix (codified in `bootstrap/01-bootstrap-core.sh`):** delete the `safe-upgrades` VAP+binding,
+**Fix (codified in `bootstrap/00-gateway-api-prep.sh`, run by both bootstrap/01 and Terraform):** delete the `safe-upgrades` VAP+binding,
 apply TLSRoute v1alpha2 from gateway-api v1.3.0, restart cilium.
 
 ## 4. Worker `apid` port closed ≠ broken worker

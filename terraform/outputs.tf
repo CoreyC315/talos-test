@@ -1,11 +1,11 @@
 output "talosconfig" {
-  description = "Talos client config (talosctl) — write to talos/clusterconfig/talosconfig"
-  value       = talos_machine_secrets.this.client_configuration
+  description = "Talos client config (talosctl). Also written to talos/clusterconfig/talosconfig."
+  value       = data.talos_client_configuration.this.talos_config
   sensitive   = true
 }
 
 output "kubeconfig" {
-  description = "Kubeconfig for the cluster (via the VIP). Write to talos/clusterconfig/kubeconfig"
+  description = "Kubeconfig (via the VIP). Also written to talos/clusterconfig/kubeconfig."
   value       = talos_cluster_kubeconfig.this.kubeconfig_raw
   sensitive   = true
 }
@@ -24,11 +24,12 @@ output "cluster_vip" {
 
 output "next_steps" {
   value = <<-EOT
-    Cluster substrate is up (nodes will be NotReady until Cilium installs — expected, CNI=none).
-    1. terraform output -raw kubeconfig  > ../talos/clusterconfig/kubeconfig
-    2. terraform output -raw talosconfig > ../talos/clusterconfig/talosconfig
-    3. cd .. && ./bootstrap/01-bootstrap-core.sh   # Cilium + Gateway API CRDs
-    4.          ./bootstrap/02-bootstrap-argocd.sh  # Argo CD + age key + root app-of-apps
-    ArgoCD then reconciles every tier from Git. Build app images: ./load-and-chaos/build-and-push.sh
+    Substrate + Cilium + Argo CD are up; Argo CD is now reconciling every tier from Git
+    (give it ~10 min). kubeconfig/talosconfig were written to talos/clusterconfig/.
+
+      export KUBECONFIG=$PWD/../talos/clusterconfig/kubeconfig
+      kubectl -n argocd get applications      # watch the fleet converge
+      ./../load-and-chaos/build-and-push.sh   # build + push the app images to the in-cluster registry
+      ./../security/vault/seed-vault.sh        # one-time Vault init/unseal + ESO wiring
   EOT
 }

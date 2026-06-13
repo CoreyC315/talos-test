@@ -66,3 +66,25 @@ variable "vm_datastore" {
   description = "Proxmox datastore for VM disks"
   default     = "local-lvm"
 }
+
+variable "age_key_file" {
+  type        = string
+  description = "Path to the SOPS age private key (mounted into Argo CD repo-server for KSOPS). Never committed."
+  default     = "~/.config/sops/age/keys.txt"
+}
+
+variable "cilium_version" {
+  type    = string
+  default = "1.19.4"
+}
+
+variable "argocd_chart_version" {
+  type    = string
+  default = "9.5.21" # Argo CD v3.4.3 — see versions.lock.md
+}
+
+variable "write_kubeconfig" {
+  type        = bool
+  description = "Write kubeconfig/talosconfig to ../talos/clusterconfig/ for kubectl/talosctl + the build script"
+  default     = true
+}
