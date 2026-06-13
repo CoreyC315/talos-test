@@ -1,6 +1,7 @@
 # Cilium 1.19.4 — Talos-specific install (kube-proxy-free, KubePrism API endpoint)
 # Talos requires: no SYS_MODULE, cgroup hostRoot pre-mounted, KubePrism for the API.
 kubeProxyReplacement: true
+MTU: 1450 # underlay 1500 - 50 VXLAN overhead; auto-detect wrongly set pods to 1500 (large cross-node packets dropped)
 k8sServiceHost: localhost
 k8sServicePort: 7445 # Talos KubePrism — HA apiserver endpoint on every node
 

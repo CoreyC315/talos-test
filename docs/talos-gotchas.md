@@ -122,3 +122,25 @@ headroom — **8 GB**, not 2.5. "MemAvailable" on a CP must stay comfortably abo
 size or the mmap thrash will take the whole cluster down, and it presents as *disk* I/O, not
 an obvious OOM. Size CP nodes for the object count, not just the pod count (which is ~zero on a
 tainted CP).
+
+## 12. Cilium VXLAN MTU left at 1500 → all large cross-node transfers silently dropped
+**Symptom (the subtle killer behind a dozen red herrings):** image pulls from the in-cluster
+registry failed cross-node ("not found"/timeout) while small catalog/tag queries succeeded;
+CNPG replica `pg_basebackup` hung forever at "join"; Argo Rollouts canary analysis aborted with
+"no route to host" to Prometheus; the API's readiness probe flapped 0/1↔1/1. Each looked like a
+different problem (registry, Longhorn, Postgres, Rollouts, DNS) and sent me chasing LB-IPAM,
+hostPort, node placement, and host load for hours.
+**Cause:** Cilium ran in **VXLAN tunnel mode** but its MTU auto-detection left the pod veth and
+`cilium_vxlan` at **1500** — the same as the underlay. VXLAN adds a 50-byte header, so any pod
+packet ≥1450 bytes becomes ≥1500 on the wire and is dropped (DF) on the 1500 physical link.
+Small packets (pings, DNS, tiny HTTP) pass; large ones (image layers, DB base-backups, bulk
+query responses) vanish. Classic "works for small, hangs for large" MTU black hole.
+**Diagnosis:** `kubectl exec <pod> -- cat /sys/class/net/eth0/mtu` → **1500** (should be 1450 on
+VXLAN). `talosctl get links` confirmed `cilium_vxlan mtu=1500` on a 1500 `ens18`.
+**Fix:** set Cilium `MTU: 1450` (helm value) — or patch `cilium-config` `mtu: "1450"` + restart
+the `cilium` DaemonSet — then **recreate existing pods** (they keep their old veth MTU until
+respawned). Fresh pods came up at 1450 and every cross-node large transfer started working:
+registry pulls, CNPG replication, Rollouts analysis, stable API readiness. **This was the single
+root cause masquerading as ~5 separate failures.**
+**Lesson:** on Talos + Cilium VXLAN over a plain 1500 LAN, pin `MTU: 1450` from day one. When
+"small requests work but big ones hang" across nodes, check pod MTU before anything else.
