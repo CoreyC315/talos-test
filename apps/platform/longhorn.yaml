@@ -24,8 +24,10 @@ spec:
             defaultReplicaCount: 1
             defaultDataPath: /var/lib/longhorn
             guaranteedInstanceManagerCPU: 5
-            backupTarget: s3://longhorn-backups@homelab/
-            backupTargetCredentialSecret: minio-credentials
+            # Volume backups go OFF-CLUSTER to the Synology NFS so they survive a full teardown
+            # (the in-cluster MinIO is on Longhorn itself — useless for Longhorn's own DR).
+            backupTarget: nfs://192.168.1.210:/volume1/backups/longhorn
+            backupTargetCredentialSecret: ""
             concurrentReplicaRebuildPerNodeLimit: 2
           longhornUI:
             replicas: 1

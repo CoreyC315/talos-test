@@ -15,6 +15,12 @@ spec:
         releaseName: kyverno
         valuesObject:
           # RAM-constrained tier: single replicas everywhere (3 workers, 14GB total)
+          # Kyverno must NEVER wedge the cluster: if its webhook is unreachable (flaky cross-node
+          # networking on this hardware) admission falls OPEN instead of blocking ALL pod creation.
+          # Safe here because every policy is validationFailureAction: Audit (advisory, not enforce).
+          features:
+            forceFailurePolicyIgnore:
+              enabled: true
           admissionController:
             replicas: 1
             container:
