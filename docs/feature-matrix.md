@@ -38,7 +38,7 @@
 ## Storage / Data
 | Feature | File | Observe |
 |---|---|---|
-| Longhorn default SC, 2 replicas | `apps/platform/longhorn.yaml` | https://longhorn.192.168.1.27.nip.io |
+| Longhorn default SC, 1 replica | `apps/platform/longhorn.yaml` | https://longhorn.192.168.1.27.nip.io |
 | Longhorn S3 backups + recurring jobs | `platform/longhorn/manifests/recurring-backup.yaml` | Longhorn UI → Backup tab; MinIO bucket `longhorn-backups` |
 | CNPG operator-managed HA Postgres | `workloads/kubeshowcase/postgres.yaml` | `kubectl -n kubeshowcase get cluster ks-db` → 2 instances, streaming replication |
 | CNPG WAL archiving + scheduled base backups → S3 | same (barmanObjectStore + ScheduledBackup) | MinIO bucket `cnpg-backups` |
@@ -48,7 +48,7 @@
 | Feature | File | Observe |
 |---|---|---|
 | Metrics (kube-prometheus-stack, all ServiceMonitors) | `apps/observability/kube-prometheus-stack.yaml` | Grafana → Explore → Prometheus |
-| Logs (Loki on S3, Alloy collector) | `apps/observability/loki.yaml`, `alloy.yaml` | Grafana → Explore → Loki `{namespace="kubeshowcase"}` |
+| Logs (Loki on S3, Alloy collector) | `apps/observability/loki.yaml`, `apps/observability/alloy.yaml` | Grafana → Explore → Loki `{namespace="kubeshowcase"}` |
 | Traces (Tempo on S3, OTel end-to-end) | `apps/observability/tempo.yaml` + `app-src/api/tracing.go` | Grafana → Explore → Tempo; frontend→API→DB spans |
 | Logs↔traces correlation (trace_id derived field) | kps values: Loki datasource derivedFields | click trace_id in a log line → Tempo trace |
 | Exemplars (metrics→traces) | API histogram exemplars + `exemplar-storage` | Grafana panel → exemplar dots |

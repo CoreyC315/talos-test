@@ -48,7 +48,7 @@ service reaches the waiting state. Retry loop required (~2 min after first boot 
 ## 6. ghcr.io push denied — OAuth token scopes
 The gh CLI's keychain token (`gho_…`) pushes Git fine but lacks `write:packages`; ghcr.io
 rejects image pushes with `denied: permission_denied`. Worked around with an in-cluster
-registry (LB `.28`, Talos `registries.mirrors` entry pointing at plain HTTP) + `crane push`
+registry (worker-1 hostPort `.23`, Talos `registries.mirrors` entry pointing at plain HTTP) + `crane push`
 (no Docker daemon insecure-registry config needed on the workstation).
 
 ## 7. Don't pipe `helm --wait` into `head`

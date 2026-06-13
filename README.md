@@ -1,4 +1,4 @@
-# KubeShowcase — a production-grade Talos Linux platform in 22 GiB of RAM
+# KubeShowcase — a production-grade Talos Linux platform on a shared homelab
 
 A complete, GitOps-driven Kubernetes platform on **Talos Linux v1.13.4** (API-only, immutable,
 SSH-less) across 6 VMs on a 3-node Proxmox cluster, reconciled end-to-end by **Argo CD** from
@@ -6,9 +6,10 @@ this repo, carrying a full LGTM observability stack, a security/governance tier,
 multi-tier demo app exercising every autoscaler and workload primitive Kubernetes has.
 
 > **Hardware honesty:** the original 48–72 GiB plan did not survive contact with reality
-> (~29 GiB actually free across the Proxmox hosts after the existing k0s/PBS/HA VMs).
-> Everything below is right-sized to ~22.5 GiB of new VMs — single-replica observability,
-> Longhorn `numberOfReplicas=2`, and a documented Stretch-tier triage. See *Resource budget*.
+> (~29 GiB free across the Proxmox hosts, which also run a busy co-tenant k0s cluster + HA + PBS).
+> It started at ~22.5 GiB of new VMs and **grew to 40 GiB / 30 vCPU** after real incidents proved
+> the control plane needed etcd headroom (see the *Resilience Report*). Single-replica
+> observability, Longhorn `numberOfReplicas=1`, documented Stretch-tier triage. See *Resource budget*.
 
 ## Architecture
 
@@ -28,11 +29,11 @@ flowchart TB
   end
   subgraph core["Core"]
     argocd["Argo CD (app-of-apps, KSOPS/SOPS)"]
-    lh["Longhorn (default SC, 2 replicas)"]
+    lh["Longhorn (default SC, 1 replica)"]
     minio["MinIO S3 (loki/tempo/velero/cnpg/longhorn buckets)"]
     cm["cert-manager: root→intermediate→leaf CA"]
     spegel["Spegel p2p image mirror :29999"]
-    reg["registry :5000 @ .28 (app images)"]
+    reg["registry :5000 @ .23 (app images)"]
   end
   subgraph obs["Observe (ns monitoring)"]
     prom["kube-prometheus-stack"]; loki["Loki (S3)"]; tempo["Tempo (S3)"]
@@ -102,7 +103,7 @@ then add to your trust store (macOS: `sudo security add-trusted-cert -d -k /Libr
    workaround, Cilium, LB-IPAM) → `./bootstrap/02-bootstrap-argocd.sh` (needs the age key at
    `~/.config/sops/age/keys.txt`). Argo CD then converges every tier from Git, in sync-wave order.
 5. **Images:** `./load-and-chaos/build-and-push.sh 1.0.0` (local docker build → crane push to
-   the in-cluster registry at .28).
+   the in-cluster registry at .23).
 6. **Vault (one-time):** `./security/vault/seed-vault.sh` — init/unseal, kv `kubeshowcase/api`,
    Kubernetes auth role for ESO.
 

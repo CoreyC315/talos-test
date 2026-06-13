@@ -125,7 +125,7 @@ self-healing given a correct substrate.
 | Cilium `MTU: 1450` | VXLAN overhead (Incident 2) | gotcha #12, `platform/cilium/values.yaml` |
 | Longhorn replicas 2→1 | halve write-amp on shared spinning disks | `apps/platform/longhorn.yaml` |
 | Prometheus retention 2d→12h | TSDB compaction I/O | `apps/observability/kube-prometheus-stack.yaml` |
-| Registry → hostPath + hostPort on `worker-1` (`.23`) | LB-IPAM/overlay too flaky under `nahida` load; physical LAN is robust | `platform/registry/registry.yaml`, gotcha (registry) |
+| Registry → hostPath + hostPort on `worker-1` (`.23`) | LB-IPAM/overlay too flaky under `nahida` load; physical LAN is robust | `platform/registry/registry.yaml`, gotcha #6 |
 | Cilium L2 announcer pinned to `worker-1` | keep VIPs off congested `nahida` | `platform/cilium/manifests/lb-ipam.yaml` |
 | Argo CD controller 1→2 GiB | OOM at 31 apps (Incident 3) | `bootstrap/argocd/values.yaml` |
 | Trivy Operator scan-paused (replicas 0) | full-image scanning saturates shared disks | `apps/security/trivy-operator.yaml` |
