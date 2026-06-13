@@ -18,7 +18,7 @@ spec:
           prometheus:
             prometheusSpec:
               replicas: 1
-              retention: 2d
+              retention: 12h
               enableFeatures:
                 - exemplar-storage
               # Scrape ALL ServiceMonitors/PodMonitors/Probes/Rules cluster-wide

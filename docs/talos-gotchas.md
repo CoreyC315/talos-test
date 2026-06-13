@@ -95,3 +95,30 @@ Live Deployment finally rendered 512Mi and went healthy.
 **Lesson:** when a Helm-via-ArgoCD app ignores a values change, check the *live Application's*
 valuesObject, not just Git. If they differ, the app-of-apps parent hasn't propagated — fix the
 parent, not the child.
+
+## 11. Undersized control-plane RAM → etcd page-cache thrash → cluster-wide outage
+**Symptom (the big one, ~hour 13):** the whole cluster became unreachable — VIP `192.168.1.19`
+down, `kubectl` got `TLS handshake timeout` against every CP node directly, `talosctl etcd`
+hung. Proxmox showed CP hosts at **load 34–68** but with **low CPU and ~73% iowait**, and the
+guilty VM (`cp-3`) reading a sustained **~300 MB/s** from disk while writing ~nothing.
+**Cause:** the CP VMs were provisioned at **2.5–3 GB RAM**. As the Observe tier landed
+(kube-prometheus-stack's many CRs, Longhorn volume/replica/engine objects, ServiceMonitors),
+the etcd DB + apiserver watch caches grew until the node ran out of RAM (`MemAvailable` ~260 MB).
+etcd's bbolt store is **mmap'd**; under memory pressure the kernel evicts its pages and re-faults
+them from disk on every access → a self-sustaining read storm at disk speed. etcd fsync/heartbeat
+then misses its deadlines → leader elections fail → apiserver can't serve → cluster down. Talos's
+OOMController was SIGKILLing besteffort pods in a loop the whole time. It ran fine for ~12 h
+because the crash-looping observability pods (no MinIO buckets yet) had done **zero** I/O until
+the buckets were created — that was the straw.
+**Diagnosis path:** Proxmox per-VM `rrddata` showed cp-3 at 300 MB/s read while the *existing
+k0s* VMs were idle (0–2 MB/s) — proving it was our etcd, not the neighbours. `talosctl dmesg`
+confirmed repeated `OOMController ... Sending SIGKILL`.
+**Fix:** bump CP RAM (cp-3 2.5→8 GB, cp-1 3→6 GB, cp-2 2.5→8 GB) via Proxmox `config memory=`,
+**rolling, worst-node-first**, so etcd never loses quorum (always 2/3 up). cp-3 alone going to
+8 GB dropped nahida's host load 68→19 instantly. Also reduced steady-state load: Longhorn
+replicas 2→1, Prometheus retention 2d→12h.
+**Lesson:** a Talos control-plane node running etcd for a CRD-heavy cluster needs real RAM
+headroom — **8 GB**, not 2.5. "MemAvailable" on a CP must stay comfortably above the etcd DB
+size or the mmap thrash will take the whole cluster down, and it presents as *disk* I/O, not
+an obvious OOM. Size CP nodes for the object count, not just the pod count (which is ~zero on a
+tainted CP).

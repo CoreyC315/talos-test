@@ -16,12 +16,12 @@ spec:
         valuesObject:
           preUpgradeChecker:
             jobEnabled: false # helm-only hook breaks under ArgoCD (SA doesn't exist pre-sync)
-          # RAM-constrained tier decision: 2 replicas (3 workers, 14GB total RAM)
+          # I/O-budget reality: 1 replica (shared Proxmox disks; 2x write-amp starved etcd fsync)
           persistence:
             defaultClass: true
-            defaultClassReplicaCount: 2
+            defaultClassReplicaCount: 1
           defaultSettings:
-            defaultReplicaCount: 2
+            defaultReplicaCount: 1
             defaultDataPath: /var/lib/longhorn
             guaranteedInstanceManagerCPU: 5
             backupTarget: s3://longhorn-backups@homelab/
