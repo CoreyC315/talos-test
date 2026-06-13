@@ -70,11 +70,14 @@ repoServer:
     - name: sops-age
       mountPath: /sops-age
   initContainers:
+    # ksops v4.5+ images are distroless (no sh/cp) — fetch the pinned release binary instead
     - name: install-ksops
-      image: quay.io/viaductoss/ksops:v4.5.1
+      image: docker.io/library/busybox:1.37.0
       command: ["/bin/sh", "-c"]
       args:
-        - echo "Installing KSOPS..."; cp /usr/local/bin/ksops /custom-tools/; echo done
+        - >-
+          wget -qO- https://github.com/viaduct-ai/kustomize-sops/releases/download/v4.5.1/ksops_4.5.1_Linux_x86_64.tar.gz
+          | tar -xz -C /custom-tools ksops && echo "ksops installed"
       volumeMounts:
         - mountPath: /custom-tools
           name: custom-tools

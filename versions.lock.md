@@ -43,7 +43,7 @@ talosctl v1.13.4 · kubectl · helm · cilium-cli · sops · age · argocd · ve
 | external-secrets | charts.external-secrets.io | 2.6.0 | v2.6.0 |
 | vault | helm.releases.hashicorp.com | 0.33.0 | vault 1.20.x |
 | kube-bench (Job image) | aquasec/kube-bench | v0.14.0 | — |
-| ksops (ArgoCD initContainer) |  quay.io/viaductoss/ksops | v4.4.0 | — |
+| ksops (ArgoCD initContainer) |  quay.io/viaductoss/ksops | v4.5.1 | — |
 
 ## Helm charts (App tier)
 | Chart | Repo | Version | App version |
