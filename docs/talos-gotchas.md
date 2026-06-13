@@ -144,3 +144,21 @@ registry pulls, CNPG replication, Rollouts analysis, stable API readiness. **Thi
 root cause masquerading as ~5 separate failures.**
 **Lesson:** on Talos + Cilium VXLAN over a plain 1500 LAN, pin `MTU: 1450` from day one. When
 "small requests work but big ones hang" across nodes, check pod MTU before anything else.
+
+## 13. Cilium L2 announcement silently stops (Gateway/LB VIP goes dark)
+**Symptom:** the Gateway VIP `192.168.1.27` (and other LB-IPAM VIPs) intermittently stop
+answering ARP even though the `CiliumL2AnnouncementPolicy` lease shows a healthy holder and the
+`cilium-envoy` backend is up. `cilium-dbg ... l2-announce` shows an **empty** announce table.
+**Cause:** after node churn (agent restarts, lease re-elections, the MTU-driven DaemonSet
+rollout), the elected announcer's agent can end up holding the lease but **not actively
+announcing** — the L2 state machine wedges.
+**Fix:** restart the *announcer's* cilium agent (`kubectl -n kube-system delete pod <cilium-on-that-node>`)
+and delete the L2 lease to force a clean re-election:
+`kubectl -n kube-system delete lease cilium-l2announce-<svc>`. The VIP starts answering within ~20s.
+Pinning the L2 policy `nodeSelector` to a single reliable node (here `worker-1` on the
+un-congested `aether` host) makes re-election deterministic.
+**Residual:** on this hardware, cross-node pod→pod traffic to a backend on the chronically
+CPU-saturated `nahida` host (a co-tenant k0s VM pegs it) still yields occasional Envoy→API `503`
+(`upstream connect timeout`). The app serves ~60–80% depending on `nahida`'s instantaneous load.
+This is an honest hardware limit, not a config error — fixed only by giving the Talos cluster
+non-shared hosts.
