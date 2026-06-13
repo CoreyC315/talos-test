@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only the token is required;
+# everything else has sensible defaults matching this homelab.
+proxmox_endpoint  = "https://192.168.1.100:8006/"
+proxmox_api_token = "terraform-prov@pve!terraform-token=REPLACE-WITH-UUID"
+
+# Overridable (defaults shown):
+# talos_version      = "v1.13.4"
+# kubernetes_version = "1.35.6"
+# schematic_id       = "7d1fa2e0d2d77244e6ab651eb49a9772e2c905c87ae4f1bd5833df1d7832a092"
+# gateway            = "192.168.1.254"
+# vm_datastore       = "local-lvm"
+# image_datastore    = "local"

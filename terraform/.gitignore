@@ -1,0 +1,8 @@
+# Terraform state holds the Talos secrets (cluster CA, etcd PKI) and the kubeconfig — never commit.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+crash.log
+*.tfplan

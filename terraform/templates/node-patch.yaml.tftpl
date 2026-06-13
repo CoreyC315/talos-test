@@ -1,0 +1,19 @@
+machine:
+  network:
+    hostname: ${hostname}
+    interfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${ip}/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${gateway}
+%{ if is_controlplane ~}
+        vip:
+          ip: ${vip}
+%{ endif ~}
+  nodeLabels:
+    topology.kubernetes.io/region: homelab
+    topology.kubernetes.io/zone: ${zone}
