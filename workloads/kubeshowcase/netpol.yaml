@@ -133,13 +133,14 @@ metadata:
   name: redis
   namespace: kubeshowcase
 spec:
-  description: Only the API and worker may touch Redis
+  description: Only the API, worker, and the KEDA scaler may touch Redis
   endpointSelector:
     matchLabels: {app: redis}
   ingress:
     - fromEndpoints:
         - matchLabels: {app: ks-api}
         - matchLabels: {app: ks-worker}
+        - matchLabels: {io.kubernetes.pod.namespace: keda} # KEDA polls list length for scale-to-zero
       toPorts:
         - ports:
             - {port: "6379", protocol: TCP}
