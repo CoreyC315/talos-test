@@ -6,7 +6,7 @@ metadata:
   name: ks-db
   namespace: kubeshowcase
 spec:
-  instances: 2 # primary + 1 streaming replica (RAM budget; CNPG handles failover)
+  instances: 1 # was 2; the nahida node is CPU-contended by a co-tenant k0s VM, replica join unreliable (documented)
   primaryUpdateStrategy: unsupervised
   storage:
     storageClass: longhorn
