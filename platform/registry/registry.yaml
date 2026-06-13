@@ -27,10 +27,7 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: worker-1 # aether host — off congested nahida; stable node IP .23
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 0 # privileged ns; needs to own its root-created hostPath cache dir
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: registry
@@ -43,6 +40,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: {drop: [ALL]}
+            runAsUser: 0
           volumeMounts:
             - {name: data, mountPath: /var/lib/registry}
           resources:
