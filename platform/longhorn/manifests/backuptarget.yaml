@@ -1,11 +1,17 @@
 # Off-cluster volume backups → Synology NFS (Celestia). Survives a full `terraform destroy`,
 # unlike the in-cluster MinIO (which lives on Longhorn itself). The recurring daily-backup job
 # (recurring-backup.yaml) writes here; restore on a fresh cluster via the Longhorn UI → Backup.
+#
+# nfsOptions are LOAD-BEARING for Synology DSM (verified live; without them the target is
+# unavailable):
+#   nfsvers=3  Synology only exports NFSv3 here — NFSv4 mounts return "Protocol not supported".
+#   nolock     no rpc.statd in the Longhorn mount namespace → NLM lock calls fail otherwise.
+#   soft,timeo=300,retry=2  fail a stuck backup instead of hanging the volume forever.
 apiVersion: longhorn.io/v1beta2
 kind: BackupTarget
 metadata:
   name: default
   namespace: longhorn-system
 spec:
-  backupTargetURL: nfs://192.168.1.210:/volume1/backups/longhorn
+  backupTargetURL: nfs://192.168.1.210:/volume1/backups/longhorn?nfsOptions=nfsvers=3,nolock,soft,timeo=300,retry=2
   pollInterval: 5m0s

@@ -46,19 +46,28 @@ Prereqs on the workstation: `kubectl`, `helm`, and the SOPS **age key** at `~/.c
 terraform destroy   # removes the 6 VMs (etcd PKI in state is discarded → fresh cluster next apply)
 terraform apply     # clean rebuild
 ```
+> For restoring **data** (not just config) after a rebuild — Longhorn-from-NAS, etcd snapshot,
+> the NAS time-capsule — see [../docs/REBUILD.md](../docs/REBUILD.md). This module only rebuilds
+> infra + the GitOps handoff; the runbook covers the whole "as it was from where it was" path.
 
 ## Adopting the EXISTING (manually-built) cluster instead of rebuilding
 The live cluster was created by hand, so it is **not** in Terraform state. Two options:
 1. **Rebuild** (recommended for a clean slate): `terraform destroy` is a no-op (nothing in state);
    delete the manual VMs in Proxmox, then `terraform apply`.
-2. **Import** the existing VMs so Terraform manages them in place:
+2. **Import** the existing VMs so Terraform manages them in place — use the helper, which imports
+   all 6 VMs (with retries through Proxmox API timeouts) and writes a stub kubeconfig so the
+   providers validate pre-cluster:
    ```bash
-   terraform import 'proxmox_virtual_environment_vm.talos["cp-1"]' raiden/220
-   # …repeat for 221,222,223,224,225 on their hosts…
+   terraform init
+   ./import.sh
+   echo 'bootstrap_cluster = false' >> terraform.tfvars   # manage VMs only — never re-bootstrap a live cluster
+   terraform plan                                          # expect only a harmless stop_on_destroy flag diff
    ```
-   To keep the *existing cluster identity* (so the current kubeconfig/certs keep working), feed the
-   committed secrets into `talos_machine_secrets` instead of generating: decrypt
-   `../talos/secrets.sops.yaml` and supply it — otherwise a fresh apply mints new PKI.
+   `bootstrap_cluster = false` gates every Talos-apply + bootstrap resource off, so import/plan/apply
+   touch only the VMs and ISOs — they will not re-key etcd or re-run Cilium/Argo CD on the running
+   cluster. To keep the *existing cluster identity* on a future full apply (so the current
+   kubeconfig/certs keep working), feed the committed secrets into `talos_machine_secrets` instead of
+   generating: decrypt `../talos/secrets.sops.yaml` and supply it — otherwise a fresh apply mints new PKI.
 
 ## Known caveats (homelab realities)
 - **Maintenance-IP discovery:** first-boot config is applied to each VM's DHCP IP read from the

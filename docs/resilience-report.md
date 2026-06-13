@@ -1,7 +1,7 @@
 # Resilience Report — KubeShowcase
 
 This is not a list of *scripted* drills that went smoothly. During the build the cluster hit
-**four genuine production incidents** on real (shared, oversubscribed) homelab hardware, each
+**five genuine production incidents** on real (shared, oversubscribed) homelab hardware, each
 diagnosed from first principles and recovered with the platform's own primitives. Those are far
 better evidence of resilience than a clean `talosctl drain`. The scripted drills (worker drain,
 CP power-off, Velero DR, rolling upgrade) are documented as runbooks in
@@ -115,6 +115,56 @@ the gateway Envoy on `worker-1` **OOM-killed** (exit 137) under the reschedule l
 **Protected by:** every controller's reconcile loop (ArgoCD self-heal, Longhorn, CNPG, Rollouts)
 eventually re-converged once the underlying network + RAM were fixed — the system is genuinely
 self-healing given a correct substrate.
+
+---
+
+## Incident 5 — single-replica volume fault → crash-loop cascade (and an operator misstep)
+**Severity:** observability tier down (~20 min). **Root cause:** a node I/O-wedge faulted the
+single replica of two Longhorn volumes; an over-aggressive manual remediation then amplified it.
+
+**Timeline**
+- `nahida` (host of 3 of our 6 VMs + the co-tenant k0s worker) drifted into sustained **disk
+  iowait** — host loadavg **~30 on worker-3's guest with the VM using only ~2.6 of 6 cores**
+  (high load, low CPU = I/O wait, not steal; the host itself sat at loadavg ~80 with 4.8 GB of
+  33 GB free). `worker-3`'s kubelet/cilium-agent could no longer service requests in time:
+  `Cilium API client timeout` → **`429 putEndpointIdTooManyRequests`** → pod sandboxes failed to
+  create → kubelet retried → more load. A self-amplifying loop.
+- With **`defaultReplicaCount: 1`** (an Incident-1 I/O-budget decision), the lone replica of the
+  `prometheus` TSDB and `loki` storage volumes lived on the wedged node and went **`faulted`**.
+  `prometheus-0` crash-looped (`/prometheus/queries.active: input/output error`); `loki-0` hung
+  `ContainerCreating`.
+
+**The misstep (documented honestly).** To "drain the noise" I mass-deleted ~15 crash-looping
+pods. On an **I/O-wedged** node this backfired: deletion itself needs kubelet I/O the node can't
+spare, so the pods stuck in **`Terminating`** (zombies), their controllers spun recreating
+replacements that piled up **`Pending`** on the memory-full `worker-2` (5.4/5.4 GB), and the
+termination/image-pull/sandbox storm drove the `nahida` host loadavg **138 → 143**. I made it
+worse before I made it better.
+
+**Recovery (what actually worked)**
+1. **Undid** the reflexive `cordon worker-3` — wrong call, because the only other nahida worker
+   was memory-full, so cordoning just stranded pods `Pending`.
+2. **Force-cleared the zombie `Terminating` pods** (`--grace-period=0 --force`) to stop the
+   control-plane reconcile churn → host loadavg dropped **142 → 78** within ~90 s.
+3. Let the host **quiesce hands-off** (no further pokes) — `loki-0` self-healed once CNI calls
+   stopped timing out.
+4. **Recreated only the genuinely-faulted volumes** (`prometheus`, `loki` — both hold *regenerable*
+   history, so a fresh PVC costs nothing): delete pod + PVC, the StatefulSet/operator reprovisions
+   a fresh Longhorn volume on a healthy node. Crash loops stopped.
+
+**Lessons (codified in gotcha #14)**
+- On an **I/O-saturated** node, *do not mass-delete pods*. Deletion is not free — it consumes the
+  exact resource the node lacks. Stop adding work, let controllers quiesce, then surgically
+  recreate only what's truly broken.
+- **`cordon` is not a relief valve when the rest of the tier has no headroom** — it converts
+  `CrashLoopBackOff` into `Pending`, not into `Running`.
+- **`replicaCount: 1` means any node I/O-wedge faults that node's volumes.** Acceptable for
+  regenerable observability data (metrics/logs); the app's Postgres is protected differently (CNPG
+  + off-cluster backups, see [REBUILD.md](REBUILD.md)), not by Longhorn replication.
+
+**Protected by:** the data that mattered was never on a single-replica Longhorn volume; the faulted
+volumes were pure cache. ArgoCD self-heal reprovisioned the StatefulSet volumes from their
+templates with zero manifest changes.
 
 ---
 

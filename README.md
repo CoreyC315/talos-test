@@ -88,6 +88,10 @@ then add to your trust store (macOS: `sudo security add-trusted-cert -d -k /Libr
 
 ## Reproduce from scratch
 
+> **The full runbook is [docs/REBUILD.md](docs/REBUILD.md)** — fresh rebuild, adopting the
+> existing cluster, and restoring *data* "as it was from where it was" (Longhorn-from-NAS, etcd
+> snapshot, time-capsule). The quick path is below.
+
 ### Fast path — Terraform (recommended): the whole thing in one `apply`
 [`terraform/`](terraform/) rebuilds **everything up to the GitOps handoff** in a single command:
 3 ISOs → 6 Proxmox VMs (final post-incident sizes) → Talos bootstrap → **Cilium** → **Argo CD + root
@@ -158,6 +162,7 @@ file path + how to observe it.
 
 ## Reports
 
+- [docs/REBUILD.md](docs/REBUILD.md) — authoritative rebuild + data-restore runbook
 - [docs/talos-gotchas.md](docs/talos-gotchas.md) — every real failure we hit and the fix
 - [docs/resilience-report.md](docs/resilience-report.md) — load, chaos, DR, upgrade timelines
 - `versions.lock.md` — every pinned version

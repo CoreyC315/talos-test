@@ -26,7 +26,10 @@ spec:
             guaranteedInstanceManagerCPU: 5
             # Volume backups go OFF-CLUSTER to the Synology NFS so they survive a full teardown
             # (the in-cluster MinIO is on Longhorn itself — useless for Longhorn's own DR).
-            backupTarget: nfs://192.168.1.210:/volume1/backups/longhorn
+            # nfsOptions are load-bearing for Synology DSM (NFSv3-only export, no rpc.statd) —
+            # see platform/longhorn/manifests/backuptarget.yaml for the full why. The BackupTarget
+            # CR there is authoritative; this default just seeds the same URL pre-CR.
+            backupTarget: nfs://192.168.1.210:/volume1/backups/longhorn?nfsOptions=nfsvers=3,nolock,soft,timeo=300,retry=2
             backupTargetCredentialSecret: ""
             concurrentReplicaRebuildPerNodeLimit: 2
           longhornUI:

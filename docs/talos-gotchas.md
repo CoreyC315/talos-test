@@ -162,3 +162,24 @@ CPU-saturated `nahida` host (a co-tenant k0s VM pegs it) still yields occasional
 (`upstream connect timeout`). The app serves ~60–80% depending on `nahida`'s instantaneous load.
 This is an honest hardware limit, not a config error — fixed only by giving the Talos cluster
 non-shared hosts.
+
+## 14. Never mass-delete pods on an I/O-wedged node (it amplifies the outage)
+**Symptom:** a node on the I/O-saturated `nahida` host stops servicing CNI in time
+(`Cilium API client timeout` → `429 putEndpointIdTooManyRequests`); the single replica
+(`defaultReplicaCount: 1`) of any Longhorn volume on it goes **`faulted`**, so `prometheus-0` /
+`loki-0` crash-loop. The reflex — `kubectl delete` the crash-looping pods to force a clean
+reschedule — makes it **worse**: on an I/O-starved node, *deletion itself* needs kubelet I/O the
+node can't spare, so pods hang in **`Terminating`** (zombies) while their controllers spawn
+replacements that pile up **`Pending`** on whatever node is memory-full. The pod churn (image
+pulls, sandbox create/destroy) spikes the host loadavg further (observed **138 → 143**).
+**Why:** `delete` is not free and `cordon` is not a relief valve — cordoning only converts
+`CrashLoopBackOff` → `Pending` when the rest of the tier has no spare RAM/CPU.
+**Fix (the order that worked):** (1) **stop adding work** — undo any cordon, delete nothing new;
+(2) force-clear the zombie `Terminating` pods (`--grace-period=0 --force`) to halt control-plane
+reconcile churn → host loadavg fell **142 → 78** in ~90 s; (3) let the host quiesce hands-off
+(`loki-0` self-healed once CNI calls stopped timing out); (4) **surgically** recreate only the
+genuinely-`faulted` volumes (delete pod + PVC; the StatefulSet/operator reprovisions a fresh
+Longhorn volume on a healthy node) — fine because TSDB/log history is regenerable.
+**Prevention:** keep stateful *data* that matters off single-replica Longhorn (the app's Postgres
+uses CNPG + off-cluster backups, see `docs/REBUILD.md`); treat single-replica volumes as cache.
+Full write-up: Resilience Report Incident 5.
