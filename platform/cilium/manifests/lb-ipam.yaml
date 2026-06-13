@@ -17,6 +17,5 @@ spec:
   interfaces:
     - ^ens[0-9]+ # Proxmox virtio NIC
   nodeSelector:
-    matchExpressions:
-      - key: node-role.kubernetes.io/control-plane
-        operator: DoesNotExist # workers answer ARP; keeps CP NICs quiet
+    matchLabels:
+      kubernetes.io/hostname: worker-1 # pin announcer to the healthy aether worker (nahida is congested)
