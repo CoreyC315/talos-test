@@ -44,8 +44,14 @@ resource "talos_machine_configuration_apply" "this" {
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
 
   # First boot: the VM is in maintenance mode on a DHCP address reported by the agent.
-  node     = each.value.ip                                                       # final identity
-  endpoint = proxmox_virtual_environment_vm.talos[each.key].ipv4_addresses[1][0] # maintenance DHCP IP (ens18)
+  node = each.value.ip # final identity
+  # Maintenance DHCP IP = the first NON-loopback IPv4 the guest agent reports. We can't assume a
+  # fixed index: Talos exposes many virtual ifaces (bond0/dummy0/teql0/tunl0/sit0/ip6tnl0) BEFORE
+  # ens18, so ens18 lands at index ~7 and a hardcoded [1] points at bond0 (which has no IPv4).
+  endpoint = [
+    for ips in proxmox_virtual_environment_vm.talos[each.key].ipv4_addresses :
+    ips[0] if length(ips) > 0 && !startswith(ips[0], "127.")
+  ][0]
 
   config_patches = compact([
     local.common_patch,

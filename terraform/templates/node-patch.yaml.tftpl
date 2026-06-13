@@ -17,3 +17,11 @@ machine:
   nodeLabels:
     topology.kubernetes.io/region: homelab
     topology.kubernetes.io/zone: ${zone}
+---
+# Talos 1.13 emits a separate HostnameConfig document; with machine.network.hostname ALSO set
+# above, apply fails ("static hostname is already set in v1alpha1 config"). Delete the generated
+# HostnameConfig so the v1alpha1 hostname is the single source of truth (matches the static
+# talos/patches/nodes/*.yaml used by the manual path).
+apiVersion: v1alpha1
+kind: HostnameConfig
+$patch: delete

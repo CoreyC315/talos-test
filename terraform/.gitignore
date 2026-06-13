@@ -7,3 +7,5 @@ terraform.tfvars
 crash.log
 *.tfplan
 .kubeconfig
+apply.log
+tfplan

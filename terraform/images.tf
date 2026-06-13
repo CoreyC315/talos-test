@@ -10,6 +10,8 @@ resource "proxmox_download_file" "talos_iso" {
   content_type = "iso"
   file_name    = local.iso_file_name
   url          = local.iso_url
-  # overwrite the existing manual download if checksums differ
-  overwrite = false
+  # Take ownership of a pre-existing ISO (e.g. left by a prior/manual build) instead of erroring —
+  # makes a fresh `apply` idempotent when the schematic ISO is already on the datastore.
+  overwrite            = true
+  overwrite_unmanaged  = true
 }
