@@ -14,7 +14,7 @@ for comp in api worker frontend pgdump; do
   ref="${REGISTRY}/ks-${comp}:${VERSION}"
   echo "==> build ${ref}"
   docker buildx build --platform linux/amd64 --load -t "${ref}" "app-src/${comp}"
-  tarball=$(mktemp /tmp/ks-img-XXXX.tar)
+  tarball=$(mktemp /tmp/ks-img.XXXXXXXX)
   docker save "${ref}" -o "${tarball}"
   echo "==> push ${ref}"
   crane push --insecure "${tarball}" "${ref}"
