@@ -6,7 +6,7 @@ resource "proxmox_virtual_environment_vm" "talos" {
   node_name = each.value.host
   vm_id     = each.value.vmid
   name      = "talos-${each.key}"
-  tags      = ["kubeshowcase", "talos", each.value.role]
+  tags      = ["kubeshowcase", "talos"] # matches the original `qm` tags (no per-role tag)
 
   # Talos VMs are not "started by the agent" but we enable the QEMU guest agent (baked into
   # the factory schematic) so Terraform can read the maintenance-mode DHCP IP for config apply.
@@ -40,7 +40,8 @@ resource "proxmox_virtual_environment_vm" "talos" {
   }
 
   cdrom {
-    file_id = "${var.image_datastore}:iso/${local.iso_file_name}"
+    file_id   = "${var.image_datastore}:iso/${local.iso_file_name}"
+    interface = "ide2" # matches the original `qm` creation (ide2), so adopting existing VMs is drift-free
   }
 
   network_device {
@@ -49,7 +50,7 @@ resource "proxmox_virtual_environment_vm" "talos" {
   }
 
   # Boot from disk first (once installed), fall back to the ISO (maintenance mode on first boot).
-  boot_order = ["scsi0", "ide3"]
+  boot_order = ["scsi0", "ide2"]
 
   # The ISO must exist on this host before the VM can reference it.
   depends_on = [proxmox_download_file.talos_iso]

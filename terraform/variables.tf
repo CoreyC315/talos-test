@@ -88,3 +88,14 @@ variable "write_kubeconfig" {
   description = "Write kubeconfig/talosconfig to ../talos/clusterconfig/ for kubectl/talosctl + the build script"
   default     = true
 }
+
+variable "bootstrap_cluster" {
+  type        = bool
+  description = <<-EOT
+    true  (default) = full build: VMs + Talos bootstrap + Cilium + Argo CD.
+    false           = manage ONLY the Proxmox VMs/ISOs, never touch the running cluster's
+                      Talos/Cilium/Argo CD bootstrap. Set false when ADOPTING the existing
+                      hand-built cluster via terraform/import.sh (so a stray apply can't re-key it).
+  EOT
+  default     = true
+}

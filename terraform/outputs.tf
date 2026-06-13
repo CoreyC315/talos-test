@@ -6,7 +6,7 @@ output "talosconfig" {
 
 output "kubeconfig" {
   description = "Kubeconfig (via the VIP). Also written to talos/clusterconfig/kubeconfig."
-  value       = talos_cluster_kubeconfig.this.kubeconfig_raw
+  value       = var.bootstrap_cluster ? talos_cluster_kubeconfig.this[0].kubeconfig_raw : null
   sensitive   = true
 }
 

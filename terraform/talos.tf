@@ -38,7 +38,7 @@ data "talos_machine_configuration" "this" {
 # Apply config to each node. The endpoint is the node's MAINTENANCE-mode DHCP IP, read from the
 # QEMU guest agent; the config then assigns the static IP (.20–.25) and the node reboots into it.
 resource "talos_machine_configuration_apply" "this" {
-  for_each = local.nodes
+  for_each = var.bootstrap_cluster ? local.nodes : {} # empty when adopting existing VMs
 
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
@@ -58,6 +58,7 @@ resource "talos_machine_configuration_apply" "this" {
 
 # Bootstrap etcd on exactly one control-plane node (cp-1), once its config is applied.
 resource "talos_machine_bootstrap" "this" {
+  count                = var.bootstrap_cluster ? 1 : 0
   depends_on           = [talos_machine_configuration_apply.this]
   node                 = local.nodes["cp-1"].ip
   endpoint             = local.nodes["cp-1"].ip
@@ -74,6 +75,7 @@ data "talos_client_configuration" "this" {
 
 # Pull the kubeconfig once the cluster is bootstrapped.
 resource "talos_cluster_kubeconfig" "this" {
+  count                = var.bootstrap_cluster ? 1 : 0
   depends_on           = [talos_machine_bootstrap.this]
   node                 = local.nodes["cp-1"].ip
   endpoint             = var.cluster_vip
@@ -82,6 +84,7 @@ resource "talos_cluster_kubeconfig" "this" {
 
 # Optional health gate so `apply` blocks until the cluster is actually up.
 data "talos_cluster_health" "this" {
+  count                = var.bootstrap_cluster ? 1 : 0
   depends_on           = [talos_cluster_kubeconfig.this]
   client_configuration = talos_machine_secrets.this.client_configuration
   control_plane_nodes  = [for k, v in local.control_planes : v.ip]
