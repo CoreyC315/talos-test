@@ -58,7 +58,7 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
           "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
           "targets": [
-            {"refId": "A", "expr": "redis_queue_depth", "legendFormat": "queue depth"}
+            {"refId": "A", "expr": "ks_queue_depth", "legendFormat": "queue depth"}
           ]
         },
         {
