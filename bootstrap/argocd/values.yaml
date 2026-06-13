@@ -71,7 +71,7 @@ repoServer:
       mountPath: /sops-age
   initContainers:
     - name: install-ksops
-      image: viaduct/ksops:v4.4.0
+      image: quay.io/viaductoss/ksops:v4.5.1
       command: ["/bin/sh", "-c"]
       args:
         - echo "Installing KSOPS..."; cp /usr/local/bin/ksops /custom-tools/; echo done

@@ -45,14 +45,16 @@ machine:
   # falls back to the upstream registry if 127.0.0.1:29999 isn't answering.
   registries:
     mirrors:
+      # Spegel first, explicit upstream fallback second (fallback past a refused
+      # mirror is not reliable for all registries — learned the hard way)
       docker.io:
-        endpoints: [http://127.0.0.1:29999]
+        endpoints: [http://127.0.0.1:29999, https://registry-1.docker.io]
       registry.k8s.io:
-        endpoints: [http://127.0.0.1:29999]
+        endpoints: [http://127.0.0.1:29999, https://registry.k8s.io]
       ghcr.io:
-        endpoints: [http://127.0.0.1:29999]
+        endpoints: [http://127.0.0.1:29999, https://ghcr.io]
       quay.io:
-        endpoints: [http://127.0.0.1:29999]
+        endpoints: [http://127.0.0.1:29999, https://quay.io]
       # In-cluster app registry (LB .28) — plain HTTP, mirrored explicitly
       192.168.1.28:5000:
         endpoints: [http://192.168.1.28:5000]
