@@ -14,9 +14,9 @@ spec:
       helm:
         releaseName: trivy-operator
         valuesObject:
-          # SCAN-PAUSED (replicas 0): full-cluster image scanning saturates the shared
-          # Proxmox disks (co-tenant k0s VM). Operator is deployed; scale to 1 to scan when quiet.
-          replicas: 0
+          # Scanning RE-ENABLED now that the co-tenant I/O contention is gone (rebalanced
+          # hardware). Was scan-paused (replicas 0) when sharing disks with the k0s VM.
+          replicas: 1
           targetNamespaces: "" # all namespaces
           operator:
             replicas: 1

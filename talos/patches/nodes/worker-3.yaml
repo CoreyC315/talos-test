@@ -12,7 +12,7 @@ machine:
 
   nodeLabels:
     topology.kubernetes.io/region: homelab
-    topology.kubernetes.io/zone: nahida
+    topology.kubernetes.io/zone: raiden # moved off nahida to balance one-worker-per-host
 ---
 apiVersion: v1alpha1
 kind: HostnameConfig

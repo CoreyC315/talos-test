@@ -131,18 +131,23 @@ Everything else — observability, security, the app — arrives via Argo CD wit
 
 ## Resource budget (actuals)
 
-Final VM allocation: **40 GiB / 30 vCPU** — grown from the planned 22.5 GiB through the
+Final VM allocation: **45 GiB / 28 vCPU** — grown from the planned 22.5 GiB through the
 incident-driven RAM bumps (control plane needed real headroom for etcd; see Resilience Report
-Incident 1). One CP per Proxmox host so no single host failure can take 2 etcd members.
+Incident 1) and the post-Incident-5 rebalance. One CP + one worker per Proxmox host so no single
+host failure can take 2 etcd members or 2 Longhorn replicas.
 
 | VM | Role | Host | vCPU | RAM | Notes |
 |---|---|---|---|---|---|
-| cp-1 | control plane | raiden | 4 | 6 GiB | capped — raiden is a 16 GiB host shared with k0s |
+| cp-1 | control plane | raiden | 4 | 6 GiB | shares raiden (16 GiB) with worker-3 |
 | cp-2 | control plane | aether | 4 | 8 GiB | |
 | cp-3 | control plane | nahida | 4 | 8 GiB | |
-| worker-1 | worker | aether | 6 | 8 GiB | hosts registry + Gateway L2 announcer (the reliable node) |
-| worker-2 | worker | nahida | 6 | 5 GiB | |
-| worker-3 | worker | nahida | 6 | 5 GiB | |
+| worker-1 | worker | aether | 6 | 7 GiB | hosts registry + Gateway L2 announcer (the reliable node) |
+| worker-2 | worker | nahida | 6 | 10 GiB | roomy host (33 GiB) gets the fattest worker |
+| worker-3 | worker | raiden | 4 | 6 GiB | **moved off nahida** → exactly one CP + one worker per host |
+
+> **Balanced topology (post-Incident-5):** every Proxmox host runs exactly one control plane +
+> one worker, so no host carries two etcd members *or* two Longhorn replica targets. This replaced
+> the original layout where `nahida` hosted 3 of 6 VMs and became the I/O bottleneck.
 
 **Measured steady-state** (`kubectl top`, ~15 h soak):
 - Control plane: cp-1 3.7 GiB (69%), cp-2 4.0 GiB (55%), cp-3 4.1 GiB (56%) — etcd + apiserver

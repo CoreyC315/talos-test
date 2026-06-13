@@ -14,25 +14,25 @@ locals {
 
   node_patches = {
     for k, v in local.nodes : k => templatefile("${path.module}/templates/node-patch.yaml.tftpl", {
-      hostname         = k
-      ip               = v.ip
-      gateway          = var.gateway
-      vip              = var.cluster_vip
-      zone             = v.host
-      is_controlplane  = v.role == "controlplane"
+      hostname        = k
+      ip              = v.ip
+      gateway         = var.gateway
+      vip             = var.cluster_vip
+      zone            = v.host
+      is_controlplane = v.role == "controlplane"
     })
   }
 }
 
 # Base machine configuration per role.
 data "talos_machine_configuration" "this" {
-  for_each         = local.nodes
-  cluster_name     = var.cluster_name
-  cluster_endpoint = local.cluster_endpoint
-  machine_type     = each.value.role
-  machine_secrets  = talos_machine_secrets.this.machine_secrets
+  for_each           = local.nodes
+  cluster_name       = var.cluster_name
+  cluster_endpoint   = local.cluster_endpoint
+  machine_type       = each.value.role
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
   kubernetes_version = var.kubernetes_version
-  talos_version    = var.talos_version
+  talos_version      = var.talos_version
 }
 
 # Apply config to each node. The endpoint is the node's MAINTENANCE-mode DHCP IP, read from the
@@ -44,7 +44,7 @@ resource "talos_machine_configuration_apply" "this" {
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
 
   # First boot: the VM is in maintenance mode on a DHCP address reported by the agent.
-  node     = each.value.ip                                                     # final identity
+  node     = each.value.ip                                                       # final identity
   endpoint = proxmox_virtual_environment_vm.talos[each.key].ipv4_addresses[1][0] # maintenance DHCP IP (ens18)
 
   config_patches = compact([

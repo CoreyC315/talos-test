@@ -16,12 +16,14 @@ spec:
         valuesObject:
           preUpgradeChecker:
             jobEnabled: false # helm-only hook breaks under ArgoCD (SA doesn't exist pre-sync)
-          # I/O-budget reality: 1 replica (shared Proxmox disks; 2x write-amp starved etcd fsync)
+          # 2 replicas now that the workers are balanced one-per-host (raiden/aether/nahida)
+          # and the co-tenant I/O contention is gone — replicas land on distinct hosts via
+          # topology, so a single node/host loss no longer faults a volume (was Incident 5).
           persistence:
             defaultClass: true
-            defaultClassReplicaCount: 1
+            defaultClassReplicaCount: 2
           defaultSettings:
-            defaultReplicaCount: 1
+            defaultReplicaCount: 2
             defaultDataPath: /var/lib/longhorn
             guaranteedInstanceManagerCPU: 5
             # Volume backups go OFF-CLUSTER to the Synology NFS so they survive a full teardown

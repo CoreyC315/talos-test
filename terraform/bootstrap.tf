@@ -3,7 +3,7 @@
 # on var.bootstrap_cluster so that adopting the existing hand-built cluster (import.sh) manages
 # only the VMs and never re-touches the running bootstrap.
 locals {
-  do_bootstrap = var.bootstrap_cluster ? 1 : 0
+  do_bootstrap       = var.bootstrap_cluster ? 1 : 0
   kubeconfig_tf_path = "${path.module}/.kubeconfig"
 }
 
