@@ -91,7 +91,8 @@ then add to your trust store (macOS: `sudo security add-trusted-cert -d -k /Libr
    util-linux-tools, qemu-guest-agent, intel-ucode). Download ISO to each Proxmox node's
    `local` storage via `download-url` API.
 2. **VMs:** 6× q35/virtio VMs (IDs 220–225 ↔ IPs .20–.25), `cpu=host`, boot order disk→ISO.
-   Sizing: CPs 4c/2.5–3G/40G; workers 6c/4–5G/70G. One CP per Proxmox host (quorum survives
+   Sizing: **CPs 4c/8G/40G** (cp-1 capped at 6G — raiden is a 16G host shared with k0s);
+   workers 6c/4–5G/70G. One CP per Proxmox host (quorum survives
    any single host failure).
 3. **Talos:** `talosctl gen config kubeshowcase https://192.168.1.19:6443 --with-secrets <(sops -d talos/secrets.sops.yaml) --kubernetes-version 1.35.6 --config-patch @talos/patches/common.yaml --config-patch-control-plane @talos/patches/cluster.yaml`
    then per node `talosctl apply-config --insecure -n <dhcp-ip> -f <role>.yaml --config-patch @talos/patches/nodes/<node>.yaml`
@@ -126,7 +127,10 @@ file path + how to observe it.
 ## Deviations from the original spec (documented trade-offs)
 
 1. **RAM reality:** workers are 4–5 GiB, not 16 GiB; single-replica Prometheus/Loki/Tempo;
-   Longhorn 2 replicas; Pyroscope (Stretch) dropped — it does not fit honestly.
+   Longhorn **1 replica** (2× write-amp on shared disks starved etcd — see gotcha #11);
+   Pyroscope (Stretch) dropped — it does not fit honestly. **Control-plane RAM was raised
+   2.5G→8G** after etcd page-cache thrash took the cluster down at ~hour 13 (gotcha #11): a
+   CRD-heavy cluster's etcd needs real headroom even though CP nodes run ~zero workload pods.
 2. **Cilium LB-IPAM** chosen over MetalLB (one fewer component, same L2 announcement job).
 3. **ReplicaSet-based canary** (Argo Rollouts) instead of Gateway-API traffic splitting — the
    gatewayAPI plugin adds a controller; replica-weighting demonstrates analysis/rollback identically.
