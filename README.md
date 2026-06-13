@@ -110,8 +110,29 @@ Everything else — observability, security, the app — arrives via Argo CD wit
 
 ## Resource budget (actuals)
 
-VM allocation total: **22.5 GiB / 30 vCPU** new on top of existing infra.
-<!-- RESOURCE_ACTUALS: filled from Grafana after soak -->
+Final VM allocation: **40 GiB / 30 vCPU** — grown from the planned 22.5 GiB through the
+incident-driven RAM bumps (control plane needed real headroom for etcd; see Resilience Report
+Incident 1). One CP per Proxmox host so no single host failure can take 2 etcd members.
+
+| VM | Role | Host | vCPU | RAM | Notes |
+|---|---|---|---|---|---|
+| cp-1 | control plane | raiden | 4 | 6 GiB | capped — raiden is a 16 GiB host shared with k0s |
+| cp-2 | control plane | aether | 4 | 8 GiB | |
+| cp-3 | control plane | nahida | 4 | 8 GiB | |
+| worker-1 | worker | aether | 6 | 8 GiB | hosts registry + Gateway L2 announcer (the reliable node) |
+| worker-2 | worker | nahida | 6 | 5 GiB | |
+| worker-3 | worker | nahida | 6 | 5 GiB | |
+
+**Measured steady-state** (`kubectl top`, ~15 h soak):
+- Control plane: cp-1 3.7 GiB (69%), cp-2 4.0 GiB (55%), cp-3 4.1 GiB (56%) — etcd + apiserver
+  static pods dominate; the headroom over the old 2.5 GiB is what keeps etcd off the OOM/thrash cliff.
+- Workers: worker-1 3.7 GiB (49%), worker-3 3.0 GiB (68%).
+- Per-tier RAM: kube-system ≈ 8.6 GiB (Cilium ×6 + Envoy ×6 + etcd/apiserver static pods),
+  monitoring ≈ 2.1 GiB (Prometheus+Loki+Tempo+Grafana+Alloy), Longhorn ≈ 0.8 GiB,
+  Falco ≈ 0.47 GiB, the **whole KubeShowcase app ≈ 0.18 GiB**, Argo CD ≈ 0.13 GiB.
+
+> The platform overhead (CNI, observability, storage, security) dwarfs the demo app — which is
+> the honest reality of a "showpiece" cluster: you are paying for the *platform*, not the workload.
 
 ## Feature matrix
 
