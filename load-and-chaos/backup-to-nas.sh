@@ -107,12 +107,17 @@ ship_via_cluster() { # tarball
   kubectl get ns "$ns" >/dev/null 2>&1 || kubectl create ns "$ns" >/dev/null
   kubectl label ns "$ns" pod-security.kubernetes.io/enforce=baseline --overwrite >/dev/null
   kubectl -n "$ns" delete pod "$pod" --ignore-not-found --now >/dev/null 2>&1
+  # Pin the uploader to a reliable worker (worker-1 on the un-congested aether host, same as the
+  # L2 announcer + registry). On the I/O-saturated nahida workers the busybox pull / NFS mount can
+  # stall past the wait timeout — see Resilience Report Incident 5. Override with UPLOADER_NODE=.
+  local node="${UPLOADER_NODE:-worker-1}"
   cat <<YAML | kubectl apply -f - >/dev/null
 apiVersion: v1
 kind: Pod
 metadata: { name: $pod, namespace: $ns }
 spec:
   restartPolicy: Never
+  nodeSelector: { kubernetes.io/hostname: $node }
   containers:
     - name: u
       image: docker.io/library/busybox:1.37.0
@@ -122,7 +127,7 @@ spec:
     - name: nas
       nfs: { server: $NAS_HOST, path: $NAS_EXPORT }
 YAML
-  kubectl -n "$ns" wait --for=condition=Ready "pod/$pod" --timeout=150s >/dev/null
+  kubectl -n "$ns" wait --for=condition=Ready "pod/$pod" --timeout=240s >/dev/null
   kubectl -n "$ns" exec "$pod" -- mkdir -p "/nas/$SUBDIR"
   kubectl cp "$tb" "$ns/$pod:/nas/$SUBDIR/$(basename "$tb")"
   kubectl -n "$ns" exec "$pod" -- ls -lh "/nas/$SUBDIR/"
