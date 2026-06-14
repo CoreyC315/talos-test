@@ -28,6 +28,10 @@ spec:
             - https://ghcr.io
             - https://registry.k8s.io
             - https://quay.io
+          # PRESERVE the existing Talos registry config (kept in _backup) instead of replacing it,
+          # and prepend Spegel only for the registries above. Without this, Spegel wipes the Talos
+          # machine-config mirror for the in-cluster registry 192.168.1.23:5000 → ErrImagePull.
+          prependExisting: true
         service:
           registry:
             hostPort: 29999
