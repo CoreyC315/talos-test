@@ -18,6 +18,16 @@ spec:
           # Talos containerd paths (registries.mirrors in machine config point at hostPort 29999)
           containerdSock: /run/containerd/containerd.sock
           containerdRegistryConfigPath: /etc/cri/conf.d/hosts
+          # ONLY mirror the public registries. Empty (the default) means "mirror ALL" via a
+          # catch-all `_default` host config that ALSO intercepts the in-cluster registry
+          # 192.168.1.23:5000 — Spegel can't proxy that plain-HTTP registry, so it 404s and app
+          # image pulls fail (ErrImagePull "not found"). Listing only the public registries leaves
+          # .23:5000 to its direct http mirror from the Talos machine config.
+          mirroredRegistries:
+            - https://docker.io
+            - https://ghcr.io
+            - https://registry.k8s.io
+            - https://quay.io
         service:
           registry:
             hostPort: 29999
