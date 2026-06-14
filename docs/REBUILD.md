@@ -96,6 +96,17 @@ state is off-cluster:
 
 ---
 
+## Operational notes
+- **Vault re-seals on every restart** (no auto-unseal in this homelab — the unseal key stays
+  yours). After any `vault-0` reschedule (node drain, reboot, OOM) Vault comes back **sealed**, and
+  `external-secrets`/`eso-config` go Degraded until you unseal:
+  ```bash
+  UNSEAL=$(jq -r '.unseal_keys_b64[0]' vault-init.json)   # from the capsule / your password manager
+  kubectl -n vault exec vault-0 -- vault operator unseal "$UNSEAL"
+  ```
+  For hands-off recovery, configure Vault auto-unseal (Transit/KMS) — deliberately not done here so
+  no unseal material lives in the cluster.
+
 ## What is NOT automatically preserved
 - **Vault contents beyond the seed** — a rebuild re-inits Vault fresh (new root/unseal keys); the
   seed script re-creates the demo KV + ESO role. Real secrets you added by hand must be re-added
