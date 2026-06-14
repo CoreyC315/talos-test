@@ -19,6 +19,7 @@ files). Everything you need to understand, operate, or extend this cluster is re
 | **Rebuild or restore it** | [[REBUILD]] | Fresh build, adopt-existing, and data-restore runbook |
 | **See past failures + fixes** | [[talos-gotchas]] · [[resilience-report]] | 14 real failure→fix writeups; 5 incidents + the clean-room rebuild |
 | **See every feature + how to observe it** | [[feature-matrix]] | One row per demonstrated capability |
+| **Plan future work** | [[plans/dual-cluster-nas\|Dual-cluster ⇄ NAS plan]] | Run k0s *or* Talos on a shared NAS data layer + a one-command switch (PLAN ONLY, not applied) |
 
 ## How to navigate this vault
 - **Concept cards** ([[concepts/index]]) are the heart of the graph — short, single-topic, heavily
