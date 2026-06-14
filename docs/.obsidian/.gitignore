@@ -1,0 +1,4 @@
+# Obsidian's per-user UI state — not worth versioning (changes constantly, machine-specific)
+workspace.json
+workspace-mobile.json
+cache/

@@ -165,6 +165,15 @@ host failure can take 2 etcd members or 2 Longhorn replicas.
 See [docs/feature-matrix.md](docs/feature-matrix.md) — one row per demonstrated feature with
 file path + how to observe it.
 
+## Knowledge vault (for humans *and* AI agents)
+
+[**docs/**](docs/HOME.md) is an **Obsidian vault** — open the `docs/` folder in Obsidian (or just
+read the Markdown). Start at [**docs/HOME.md**](docs/HOME.md): it routes you to live triage
+([OPERATIONS](docs/OPERATIONS.md)), ~60 interlinked [concept cards](docs/concepts/index.md) ("what is
+X, how it works, where it's used here"), and the deep [curriculum](docs/learn/README.md). Every card
+links to related concepts and its full module, so an agent or engineer can land cold and navigate to
+exactly what they need.
+
 ## Learn this stack
 
 New to half these tools? [**docs/learn/**](docs/learn/README.md) is a hands-on curriculum that
