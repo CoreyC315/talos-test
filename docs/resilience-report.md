@@ -168,6 +168,36 @@ templates with zero manifest changes.
 
 ---
 
+## The clean-room rebuild — reproducibility, proven (not just claimed)
+After the co-tenant machines were powered off (freeing the hosts), the **entire cluster was torn
+down and rebuilt from scratch via `terraform apply`** — 6 VMs deleted, fresh PKI, fresh etcd,
+the whole platform reconciled by Argo CD from Git. This is the real test of "redeploy it as it
+was," and it surfaced **seven latent reproducibility gaps** that a hand-built cluster had silently
+papered over. Each is now fixed in Git, so the *next* `terraform apply` is clean:
+
+| # | Gap (only bit on a true from-scratch build) | Fix |
+|---|---|---|
+| 1 | Maintenance-IP discovery hard-coded `ipv4_addresses[1][0]`; Talos exposes bond0/dummy0/… before ens18 | pick first non-loopback IPv4 dynamically (`talos.tf`) |
+| 2 | Talos 1.13 "static hostname already set in v1alpha1 config" | add `HostnameConfig $patch: delete` to the TF node-patch template |
+| 3 | ISO already on the datastore → `proxmox_download_file` errored | `overwrite_unmanaged = true` (`images.tf`) |
+| 4 | Gateway-API prep ran before the VIP stabilised; TLSRoute now ships in gw-api ≥1.5 standard (v1) | wait-for-API loop; flip the existing CRD's `v1alpha2` to *served* instead of applying the old CRD |
+| 5 | `node-exporter` rejected — `monitoring` ns inherited PSA `baseline` | `managedNamespaceMetadata` privileged (matches longhorn) — this had **stalled the whole app-of-apps sync wave** |
+| 6 | **Spegel's `mirroredRegistries: []` (= mirror ALL) wrote a catch-all that hijacked the plain-HTTP in-cluster registry → `ErrImagePull`** | list only public registries + `prependExisting: true` + mirror the in-cluster registry as `http://` |
+| 7 | `prometheus-adapter` OOMKilled at 512Mi once full observability (2d retention) was restored | limit → 1Gi |
+
+**Plus a real failover *during* the rebuild:** under the deploy churn, CNPG's Postgres primary
+moved to `ks-db-2` and the old replica diverged on its WAL timeline ("Refusing to restore future
+timeline"). CNPG's own remediation handled it — deleting the diverged instance's PVC triggered an
+automatic `pg_basebackup` re-clone from the new primary, back to 2/2. The app served HTTP 201s
+throughout (writes went to the surviving primary).
+
+**Outcome:** a fresh, **balanced** cluster (one CP + one worker per host), Longhorn at **2
+replicas** across distinct hosts, full LGTM + security tiers Healthy, the demo app exercising
+Postgres-HA / Redis-queue / KEDA scale-to-zero / HPA-custom-metrics — all from `terraform apply`
+→ Argo CD → `03-finish.sh`. The reproducibility claim is now load-bearing.
+
+---
+
 ## Engineering decisions forced by the hardware (documented deviations)
 | Decision | Why | Where |
 |---|---|---|
