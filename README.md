@@ -165,6 +165,14 @@ host failure can take 2 etcd members or 2 Longhorn replicas.
 See [docs/feature-matrix.md](docs/feature-matrix.md) — one row per demonstrated feature with
 file path + how to observe it.
 
+## Learn this stack
+
+New to half these tools? [**docs/learn/**](docs/learn/README.md) is a hands-on curriculum that
+teaches every component **by poking this live cluster** — 8 weekend-sized modules (foundations →
+networking → GitOps → storage → scaling → observability → security → release/ops), each with a lab
+you run against your own cluster, interview-style questions, and CKA/CKAD/CKS cert mapping. Start
+with the [decoder ring](docs/learn/README.md#the-decoder-ring--what-even-is-that-in-one-line-each).
+
 ## Reports
 
 - [docs/REBUILD.md](docs/REBUILD.md) — authoritative rebuild + data-restore runbook
