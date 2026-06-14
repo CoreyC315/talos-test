@@ -19,8 +19,10 @@ spec:
             url: http://kube-prometheus-stack-prometheus.monitoring.svc
             port: 9090
           resources:
-            requests: {cpu: 25m, memory: 128Mi}
-            limits: {memory: 512Mi}
+            requests: {cpu: 25m, memory: 256Mi}
+            # OOMKilled at 512Mi once full observability was restored (2d retention → more series
+            # to load on startup). Headroom is available post-rebalance; 1Gi is comfortable.
+            limits: {memory: 1Gi}
           rules:
             custom:
               - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
