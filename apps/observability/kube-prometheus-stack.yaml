@@ -142,3 +142,10 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # node-exporter needs hostNetwork/hostPID/hostPath/hostPort — the cluster default PSA is
+        # 'baseline' which forbids those, so the monitoring namespace must be privileged (same as
+        # longhorn-system). Without this a fresh build's node-exporter DaemonSet is rejected and
+        # kube-prometheus-stack never goes Healthy, stalling the app-of-apps sync wave.
+        pod-security.kubernetes.io/enforce: privileged
