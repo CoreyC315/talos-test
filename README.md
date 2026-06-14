@@ -175,6 +175,7 @@ with the [decoder ring](docs/learn/README.md#the-decoder-ring--what-even-is-that
 
 ## Reports
 
+- [docs/OPERATIONS.md](docs/OPERATIONS.md) — **start here when something's wrong**: dense symptom→cause→fix map, where everything lives, what's normal vs broken
 - [docs/REBUILD.md](docs/REBUILD.md) — authoritative rebuild + data-restore runbook
 - [docs/talos-gotchas.md](docs/talos-gotchas.md) — every real failure we hit and the fix
 - [docs/resilience-report.md](docs/resilience-report.md) — load, chaos, DR, upgrade timelines
