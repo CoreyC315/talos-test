@@ -28,9 +28,12 @@ spec:
             - https://ghcr.io
             - https://registry.k8s.io
             - https://quay.io
-          # PRESERVE the existing Talos registry config (kept in _backup) instead of replacing it,
-          # and prepend Spegel only for the registries above. Without this, Spegel wipes the Talos
-          # machine-config mirror for the in-cluster registry 192.168.1.23:5000 → ErrImagePull.
+            # In-cluster app registry (worker-1 hostPort, PLAIN HTTP). Spegel manages the whole
+            # containerd hosts dir, so it must mirror this too — otherwise there is NO config for
+            # it and pulls fail. With the http:// scheme Spegel writes `server = http://...:5000`
+            # as the fallback after its p2p mirror, so a cache miss still resolves over HTTP.
+            - http://192.168.1.23:5000
+          # Keep existing Talos mirror entries (don't wipe them) and prepend Spegel's.
           prependExisting: true
         service:
           registry:
