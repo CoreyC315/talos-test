@@ -5,7 +5,7 @@ metadata:
   namespace: media-dl
   labels: { app: qbittorrent }
 spec:
-  replicas: 0 # parked — VPN flapping on unstable network (aether down); bring up when stable
+  replicas: 1 # up on fresh ProtonVPN key
   selector:
     matchLabels: { app: qbittorrent }
   strategy:
