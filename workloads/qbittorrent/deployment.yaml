@@ -5,7 +5,7 @@ metadata:
   namespace: media-dl
   labels: { app: qbittorrent }
 spec:
-  replicas: 1 # up on fresh ProtonVPN key
+  replicas: 0 # parked — WireGuard-to-ProtonVPN won't pass traffic from here (see notes)
   selector:
     matchLabels: { app: qbittorrent }
   strategy:
