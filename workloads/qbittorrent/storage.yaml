@@ -1,0 +1,71 @@
+# qBittorrent storage — lives in the `media-dl` namespace (privileged PSS) because its gluetun
+# VPN sidecar needs NET_ADMIN, which the baseline `media` namespace forbids.
+#
+# config: static NFS PV at the SAME fixed path the k0s qbit used (/volume1/appconfig/qbittorrent),
+#         so the config is shared/switch-ready like the other apps.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: qbittorrent-config-nfs
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: qbittorrent-config-nfs
+    volumeAttributes:
+      server: 192.168.1.210
+      share: /volume1/appconfig/qbittorrent
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-config
+  namespace: media-dl
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: qbittorrent-config-nfs
+  resources:
+    requests:
+      storage: 2Gi
+---
+# data: the SAME media library the *arr apps mount (/volume1/media/pvc-7a5c8634-...). qbit's downloads
+# must sit on the one filesystem sonarr/radarr import from, for hardlinks + atomic moves. Sibling
+# static PV to media-library-nfs (different volumeHandle, same share) since this lives in another ns.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: qbit-media-nfs
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: qbit-media-nfs
+    volumeAttributes:
+      server: 192.168.1.210
+      share: /volume1/media/pvc-7a5c8634-4a2d-4938-a86c-6bd203e91067
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-library
+  namespace: media-dl
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: qbit-media-nfs
+  resources:
+    requests:
+      storage: 1Ti

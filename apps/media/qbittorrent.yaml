@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: qbittorrent
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6" # after the NFS CSI/storage layer
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CoreyC315/talos-test.git
+    targetRevision: main
+    path: workloads/qbittorrent
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media-dl
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # gluetun needs NET_ADMIN/MKNOD (tun device + VPN routing) — baseline/restricted PSS forbid it,
+        # so this namespace runs privileged. It holds ONLY the VPN-isolated qbit pod; the *arr apps
+        # stay at baseline in the `media` ns.
+        pod-security.kubernetes.io/enforce: privileged

@@ -1,0 +1,19 @@
+# Gateway API route → qbittorrent.192.168.1.27.nip.io (replaces the homelab nginx Ingress qbit.local).
+# Lives in media-dl alongside the qbit Service; the shared Gateway accepts routes from all namespaces.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qbittorrent
+  namespace: media-dl
+  annotations:
+    argocd.argoproj.io/ignore-healthcheck: "true" # Gateway arrives in an earlier wave; don't gate
+spec:
+  parentRefs:
+    - name: shared
+      namespace: gateway
+  hostnames:
+    - qbittorrent.192.168.1.27.nip.io
+  rules:
+    - backendRefs:
+        - name: qbittorrent
+          port: 8080

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: media-dl
+  labels: { app: qbittorrent }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: qbittorrent }
+  strategy:
+    type: Recreate # single writer for qBittorrent.conf/fastresume on RWX-NFS
+  template:
+    metadata:
+      labels: { app: qbittorrent }
+    spec:
+      containers:
+        # --- GLUETUN: ProtonVPN WireGuard + auto-port-forward sync (replicated from the homelab) ---
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.41.0
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "MKNOD"] # NET_ADMIN: tun/routing; MKNOD: create /dev/net/tun on Talos
+          envFrom:
+            - secretRef:
+                name: protonvpn-secret # copied from the homelab cluster (WireGuard creds)
+          env:
+            - { name: VPN_PORT_FORWARDING, value: "on" }
+            - { name: VPN_PORT_FORWARDING_PROVIDER, value: "protonvpn" }
+            # runs whenever the VPN hands out a new forwarded port → pushes it into qbit's listen_port
+            - name: VPN_PORT_FORWARDING_UP_COMMAND
+              value: "/bin/sh -c 'wget -qO- --post-data \"json={\\\"listen_port\\\":{{PORT}}}\" http://localhost:8080/api/v2/app/setPreferences'"
+            - { name: HTTP_CONTROL_SERVER_ADDRESS, value: ":8000" }
+            # Cilium/Talos: the homelab omitted these, but gluetun's firewall blocks non-VPN traffic by
+            # default → without them the WebUI is unreachable and qbit can't reach in-cluster DNS/peers.
+            - { name: FIREWALL_INPUT_PORTS, value: "8080" } # allow the WebUI in (Service/Gateway, sonarr)
+            - { name: FIREWALL_OUTBOUND_SUBNETS, value: "10.244.0.0/16,10.96.0.0/12" } # pod + service CIDRs
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        # --- QBITTORRENT (shares gluetun's netns → all its traffic is killswitched through the VPN) ---
+        - name: qbittorrent
+          image: lscr.io/linuxserver/qbittorrent:5.1.4-r2-ls446
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: TZ, value: "America/Detroit" }
+            - { name: WEBUI_PORT, value: "8080" }
+          ports:
+            - { name: webui, containerPort: 8080 }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: data, mountPath: /data }
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: media-library

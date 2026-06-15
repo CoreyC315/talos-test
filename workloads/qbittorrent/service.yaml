@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: media-dl
+spec:
+  selector: { app: qbittorrent }
+  ports:
+    - { name: webui, protocol: TCP, port: 8080, targetPort: 8080 }
+    - { name: torrent-tcp, protocol: TCP, port: 6881, targetPort: 6881 }
+    - { name: torrent-udp, protocol: UDP, port: 6881, targetPort: 6881 }

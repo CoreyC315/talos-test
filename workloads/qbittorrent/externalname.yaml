@@ -1,0 +1,13 @@
+# sonarr/radarr (in the `media` ns) have their download client saved as host "qbittorrent" (bare name,
+# resolved in their own namespace). qbit actually lives in `media-dl`, so this ExternalName aliases
+# qbittorrent.media -> qbittorrent.media-dl, keeping the *arr config working with zero changes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: media
+spec:
+  type: ExternalName
+  externalName: qbittorrent.media-dl.svc.cluster.local
+  ports:
+    - { name: webui, protocol: TCP, port: 8080, targetPort: 8080 }
