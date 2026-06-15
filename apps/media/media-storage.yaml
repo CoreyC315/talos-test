@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: media-storage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5" # before the apps (wave 6) so the media PVC exists first
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CoreyC315/talos-test.git
+    targetRevision: main
+    path: workloads/media-shared
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline

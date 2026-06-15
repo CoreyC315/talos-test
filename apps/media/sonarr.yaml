@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sonarr
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6" # after the NFS CSI/storage layer (wave 2)
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CoreyC315/talos-test.git
+    targetRevision: main
+    path: workloads/sonarr
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # linuxserver.io images start as root (s6 init) then drop to PUID — baseline PSS allows that
+        # (restricted would block the root start). No host access needed.
+        pod-security.kubernetes.io/enforce: baseline

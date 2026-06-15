@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: suwayomi
+  namespace: media
+spec:
+  selector: { app: suwayomi }
+  ports:
+    - { name: http, protocol: TCP, port: 4567, targetPort: 4567 }

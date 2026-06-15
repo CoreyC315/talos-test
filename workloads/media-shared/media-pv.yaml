@@ -1,0 +1,35 @@
+# Shared media library on the Synology — the SAME path the k0s cluster's apps mount
+# (192.168.1.210:/volume1/media/pvc-7a5c8634-...), so both clusters see the same movies/TV/manga.
+# RWX so every media app (sonarr/radarr/komga/suwayomi) mounts it at /data simultaneously, on one
+# filesystem (required for *arr hardlinks/atomic moves). Static PV → fixed path, shared across clusters.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-library-nfs
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: media-library-nfs
+    volumeAttributes:
+      server: 192.168.1.210
+      share: /volume1/media/pvc-7a5c8634-4a2d-4938-a86c-6bd203e91067
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-library
+  namespace: media
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: media-library-nfs
+  resources:
+    requests:
+      storage: 1Ti

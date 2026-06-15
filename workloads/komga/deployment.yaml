@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: komga
+  namespace: media
+  labels: { app: komga }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: komga }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the SQLite db
+  template:
+    metadata:
+      labels: { app: komga }
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: komga
+          image: docker.io/gotson/komga:1.24.4 # pinned, same as the homelab (not a linuxserver image)
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - { name: TZ, value: "America/Detroit" }
+          ports:
+            - { name: http, containerPort: 25600 }
+          readinessProbe:
+            tcpSocket: { port: 25600 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 25600 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: media, mountPath: /data }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: komga-config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-library # existing shared PVC (workloads/media-shared)

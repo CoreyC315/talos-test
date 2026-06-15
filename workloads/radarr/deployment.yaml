@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: media
+  labels: { app: radarr }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: radarr }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the SQLite db
+  template:
+    metadata:
+      labels: { app: radarr }
+    spec:
+      containers:
+        - name: radarr
+          image: ghcr.io/linuxserver/radarr:6.1.1.10360-ls300 # lscr.io -> ghcr.io (Kyverno allowlist), same tag as homelab
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+          ports:
+            - { name: http, containerPort: 7878 }
+          readinessProbe:
+            tcpSocket: { port: 7878 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 7878 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: data, mountPath: /data } # Shared TrueNAS/NFS media mount
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: radarr-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: media-library # existing shared media PVC (workloads/media-shared)

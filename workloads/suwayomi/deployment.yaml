@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suwayomi
+  namespace: media
+  labels: { app: suwayomi }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: suwayomi }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the sqlite/state files
+  template:
+    metadata:
+      labels: { app: suwayomi }
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: suwayomi
+          image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100 # ghcr.io, same tag as the homelab
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - { name: TZ, value: America/Detroit }
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: FLARESOLVERR_ENABLED, value: "true" }
+            - { name: FLARESOLVERR_URL, value: "http://flaresolverr:8191" }
+            - { name: FLARESOLVERR_TIMEOUT, value: "60000" }
+          ports:
+            - { name: http, containerPort: 4567 }
+          readinessProbe:
+            tcpSocket: { port: 4567 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 4567 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: config, mountPath: /home/suwayomi/.local/share/Tachidesk }
+            - name: manga
+              mountPath: /home/suwayomi/.local/share/Tachidesk/downloads/mangas
+              subPath: manga
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: suwayomi-config
+        - name: manga
+          persistentVolumeClaim:
+            claimName: media-library # existing shared media PVC (do not create)

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seerr
+  namespace: media
+  labels: { app: seerr }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: seerr }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the SQLite db
+  template:
+    metadata:
+      labels: { app: seerr }
+    spec:
+      containers:
+        - name: seerr
+          image: fallenbagel/jellyseerr:2.7.3 # pinned, same as the homelab (docker.io image, kept as-is)
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+          ports:
+            - { name: http, containerPort: 5055 }
+          readinessProbe:
+            tcpSocket: { port: 5055 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 5055 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /app/config }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: seerr-config

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr
+  namespace: media
+  labels: { app: sonarr }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: sonarr }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the SQLite db
+  template:
+    metadata:
+      labels: { app: sonarr }
+    spec:
+      containers:
+        - name: sonarr
+          image: ghcr.io/linuxserver/sonarr:4.0.17.2952-ls309 # lscr.io→ghcr.io (Kyverno allowlist), same tag as homelab
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: TZ, value: "Etc/UTC" }
+          ports:
+            - { name: http, containerPort: 8989 }
+          readinessProbe:
+            tcpSocket: { port: 8989 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8989 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: data, mountPath: /data } # shared media library
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sonarr-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: media-library # existing shared media PVC (workloads/media-shared)

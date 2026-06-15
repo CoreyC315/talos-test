@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flaresolverr
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6" # after the NFS CSI/storage layer (wave 2)
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CoreyC315/talos-test.git
+    targetRevision: main
+    path: workloads/flaresolverr
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # internal-only solver (no shared NFS config); baseline PSS is sufficient
+        pod-security.kubernetes.io/enforce: baseline

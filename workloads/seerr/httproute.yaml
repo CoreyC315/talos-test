@@ -1,0 +1,19 @@
+# Gateway API route (this cluster uses Gateway API, not Ingress) → seerr.192.168.1.27.nip.io.
+# Replaces the homelab's nginx Ingress (seerr.local/.lan). Attaches to the shared Gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: seerr
+  namespace: media
+  annotations:
+    argocd.argoproj.io/ignore-healthcheck: "true" # Gateway arrives in an earlier wave; don't gate
+spec:
+  parentRefs:
+    - name: shared
+      namespace: gateway
+  hostnames:
+    - seerr.192.168.1.27.nip.io
+  rules:
+    - backendRefs:
+        - name: seerr
+          port: 5055

@@ -1,0 +1,35 @@
+# Static NFS PV → a FIXED path on the Synology (192.168.1.210:/volume1/appconfig/komga) so the
+# SAME config dir can be mounted by EITHER cluster. The k0s side will point its own static PV at this
+# identical path → state is shared across a cluster switch (dual-cluster plan Phase 3). A fixed path
+# (not the dynamic per-PVC subdir) is what makes the sharing deterministic.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: komga-config-nfs
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "" # static binding (no dynamic provisioner)
+  mountOptions:
+    - nfsvers=4.1
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: komga-config-nfs
+    volumeAttributes:
+      server: 192.168.1.210
+      share: /volume1/appconfig/komga
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: komga-config
+  namespace: media
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: komga-config-nfs # bind to the static PV above
+  resources:
+    requests:
+      storage: 5Gi
