@@ -5,7 +5,7 @@ metadata:
   namespace: media
   labels: { app: prowlarr }
 spec:
-  replicas: 0 # dual-cluster round-trip test: handed off to k0s (one writer at a time on the shared NFS DB)
+  replicas: 1
   selector:
     matchLabels: { app: prowlarr }
   strategy:
