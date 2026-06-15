@@ -41,6 +41,11 @@ spec:
             # forward negotiation time to settle before the healthcheck judges it.
             - { name: WIREGUARD_MTU, value: "1320" }
             - { name: HEALTH_VPN_DURATION_INITIAL, value: "30s" }
+            # Talos/Cilium: kernel-space WireGuard's UDP socket doesn't get its handshake replies back
+            # through Cilium's eBPF datapath (tun0 showed tx>0 / rx=0 → handshake never completes).
+            # Force user-space wireguard-go, which owns its socket in the pod netns. (Homelab's CNI
+            # handled kernel WG fine — this is the one Talos-specific deviation from that config.)
+            - { name: WIREGUARD_IMPLEMENTATION, value: "userspace" }
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 256Mi }
