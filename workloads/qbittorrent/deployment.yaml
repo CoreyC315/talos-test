@@ -35,7 +35,9 @@ spec:
             # Cilium/Talos: the homelab omitted these, but gluetun's firewall blocks non-VPN traffic by
             # default → without them the WebUI is unreachable and qbit can't reach in-cluster DNS/peers.
             - { name: FIREWALL_INPUT_PORTS, value: "8080" } # allow the WebUI in (Service/Gateway, sonarr)
-            - { name: FIREWALL_OUTBOUND_SUBNETS, value: "10.244.0.0/16,10.96.0.0/12" } # pod + service CIDRs
+            # NOTE: FIREWALL_OUTBOUND_SUBNETS removed — it conflicted with the ProtonVPN NAT-PMP gateway
+            # (10.2.0.1) and broke port forwarding. WebUI inbound works via FIREWALL_INPUT_PORTS; qbit's
+            # DNS/peers go through the tunnel, so it doesn't need outbound cluster access.
             # Cilium pod MTU is 1450; WireGuard adds ~60B overhead, so the default WG MTU (1400) drops
             # full-size packets → healthcheck (TLS/DNS) i/o timeouts → endless VPN restart loop → qbit
             # "firewalled". Pin WG MTU well under the underlay, and give the tunnel + ProtonVPN port-
