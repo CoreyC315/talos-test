@@ -17,5 +17,8 @@ spec:
   interfaces:
     - ^ens[0-9]+ # Proxmox virtio NIC
   nodeSelector:
+    # Any Linux node may announce → Cilium leader-elects one and FAILS OVER if it dies. Previously
+    # pinned to worker-1 (a SPOF: when worker-1/aether went down, every LB IP went dark with no
+    # failover). Resilience > avoiding nahida congestion for lightweight ARP announcement.
     matchLabels:
-      kubernetes.io/hostname: worker-1 # pin announcer to the healthy aether worker (nahida is congested)
+      kubernetes.io/os: linux
