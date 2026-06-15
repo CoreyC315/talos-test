@@ -17,7 +17,8 @@ spec:
       containers:
         # --- GLUETUN: ProtonVPN WireGuard + auto-port-forward sync (replicated from the homelab) ---
         - name: gluetun
-          image: qmcgaw/gluetun:v3.41.0
+          image: qmcgaw/gluetun:latest # was v3.41.0 — latest ships a fresher ProtonVPN server list
+          imagePullPolicy: Always
           securityContext:
             capabilities:
               add: ["NET_ADMIN", "MKNOD"] # NET_ADMIN: tun/routing; MKNOD: create /dev/net/tun on Talos
@@ -51,7 +52,8 @@ spec:
             limits: { memory: 256Mi }
         # --- QBITTORRENT (shares gluetun's netns → all its traffic is killswitched through the VPN) ---
         - name: qbittorrent
-          image: lscr.io/linuxserver/qbittorrent:5.1.4-r2-ls446
+          image: lscr.io/linuxserver/qbittorrent:latest # was 5.1.4-r2-ls446
+          imagePullPolicy: Always
           env:
             - { name: PUID, value: "1000" }
             - { name: PGID, value: "1000" }
