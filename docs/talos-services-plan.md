@@ -4,8 +4,30 @@
 the *arr stack + prowlarr, qbittorrent (VPN), and jellyfin (GPU), with the full pipeline wired
 (request → search → download → import → library → playback).
 
-**Current blocker:** aether is hung at POST (Vega reset bug) → worker-1 + cp-2 down. Phase 0 clears it.
-Run the phases in order once aether is cold-booted.
+## STATUS — executed 2026-06-15 ✅ (then Talos VMs shut down for a break)
+Ran end-to-end after the aether cold-boot (which un-wedged the GPU). **Operational on Talos:** jellyfin
+(GPU **VAAPI transcoding** proven via a real hw encode), sonarr (385 series) / radarr (81 movies) /
+komga / suwayomi / prowlarr / seerr / flaresolverr — all 1/1 + reachable via the Gateway; prowlarr→*arr
+**320 indexers** synced; seerr→jellyfin wired (ExternalName `jellyfin-service`); Gateway L2 SPOF fixed
+(any node announces now); NFS config + GPU all good. **On next boot:** a few platform/security apps
+(eso-config, vault, trivy-operator, kubeshowcase) were left Degraded/Progressing recovering from the
+outage + root app OutOfSync — reconcile/verify them.
+
+### ⛔ qbit — PARKED (WireGuard↔ProtonVPN won't pass traffic from this network)
+Tested exhaustively; fails identically every way: clusters (Talos **and** homelab), servers (Columbus
+**and** US-MI#1), keys (original **and** fresh `wg-US-MI-1`), gluetun (v3.41.0 **and** latest), modes
+(protonvpn-provider **and** custom). Signature: tunnel connects, passes traffic ~1–2 min, then stops
+(DNS i/o-timeout, 0 DHT nodes, 0 up/down data) and gluetun flaps (~10 restarts/min). Two separate
+clusters failing identically ⇒ it's the **WG-to-ProtonVPN path on the home network** (likely ISP/router
+throttling WireGuard UDP), NOT Talos/config. Current state: `replicas:0`; images on `:latest`; secret in
+**custom mode** → US-MI#1 (`VPN_ENDPOINT_IP=192.144.21.2`, server pubkey set, SERVER_CITIES/COUNTRIES
+removed); `FIREWALL_OUTBOUND_SUBNETS` removed (it broke NAT-PMP). **Next lever (untried): OpenVPN** —
+switch gluetun to ProtonVPN-over-OpenVPN (TCP/443, looks like HTTPS → bypasses WG throttling); needs the
+ProtonVPN **OpenVPN username/password** (dashboard → Account → OpenVPN/IKEv2, *different* from the WG
+key). Quick triage: run `wg-US-MI-1.conf` directly on a phone/laptop — if it fails there too, it's the ISP.
+
+---
+*Original forward plan below (kept for reference / re-runs):*
 
 ---
 
