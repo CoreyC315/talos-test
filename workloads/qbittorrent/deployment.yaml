@@ -5,7 +5,7 @@ metadata:
   namespace: media-dl
   labels: { app: qbittorrent }
 spec:
-  replicas: 1 # retry after ProtonVPN rate-limit window
+  replicas: 0 # VPN key unreliable (re-flapped); pending fresh ProtonVPN WireGuard config
   selector:
     matchLabels: { app: qbittorrent }
   strategy:
