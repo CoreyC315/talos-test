@@ -1,0 +1,14 @@
+# seerr (in `media`) has jellyfin saved as host "jellyfin-service" (the homelab service name). jellyfin
+# now lives in `media-gpu` as service "jellyfin". This ExternalName aliases jellyfin-service.media ->
+# jellyfin.media-gpu so seerr's migrated config resolves with no edit. (Ports 80 + 8096 both work.)
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-service
+  namespace: media
+spec:
+  type: ExternalName
+  externalName: jellyfin.media-gpu.svc.cluster.local
+  ports:
+    - { name: http, protocol: TCP, port: 8096, targetPort: 8096 }
+    - { name: http-80, protocol: TCP, port: 80, targetPort: 8096 }
