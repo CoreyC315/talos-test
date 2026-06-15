@@ -25,6 +25,9 @@ spec:
             runAsGroup: 1000
           env:
             - { name: TZ, value: "America/Detroit" }
+            # Komga blocks its SQLite DB on a remote FS by default; safe here on NFSv4.1 (proper
+            # byte-range locking, single writer at a time) — same as Prowlarr's SQLite over NFS.
+            - { name: KOMGA_DATABASE_CHECK_LOCAL_FILESYSTEM, value: "false" }
           ports:
             - { name: http, containerPort: 25600 }
           readinessProbe:
