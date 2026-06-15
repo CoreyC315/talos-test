@@ -1,0 +1,35 @@
+# NFS StorageClasses backed by the Synology (Celestia, 192.168.1.210) over NFSv4.1 (proper byte-range
+# locking → SQLite-safe). Names intentionally MATCH the k0s homelab so identical PVC manifests work
+# on either cluster — part of the dual-cluster shared-NAS plan (docs/plans/dual-cluster-nas.md).
+#
+# NOTE for Phase 3: these are DYNAMIC provisioners (each PVC gets a fresh pvc-<uuid> subdir under the
+# share). For app config that must be SHARED across clusters (so state follows a cluster switch), use
+# a STATIC PV with a FIXED subdir per app (e.g. /volume1/appconfig/sonarr) referenced identically on
+# both clusters — a random per-PVC subdir would NOT be shared. Dynamic is fine for verifying the
+# driver and for any per-cluster scratch volume.
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: celestia-nfs # media — same name as the homelab's class
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 192.168.1.210
+  share: /volume1/media
+reclaimPolicy: Retain # keep the data if a PVC is deleted
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: celestia-appconfig # NEW — the shared, cluster-agnostic app-config layer
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: 192.168.1.210
+  share: /volume1/appconfig
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1

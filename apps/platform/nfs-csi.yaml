@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nfs-csi
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2" # storage layer, alongside Longhorn
+spec:
+  project: default
+  sources:
+    # The CSI driver (privileged node plugin that mounts NFS on each node).
+    # THE Talos gotcha: kubeletDir is /var/lib/kubelet — NOT k0s's /var/lib/k0s/kubelet.
+    - repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+      chart: csi-driver-nfs
+      targetRevision: v4.9.0
+      helm:
+        releaseName: csi-driver-nfs
+        values: |
+          kubeletDir: /var/lib/kubelet
+    # The StorageClasses (Synology NFS, NFSv4.1). Names MATCH the k0s homelab so the same PVC
+    # manifests work on either cluster (dual-cluster plan: docs/plans/dual-cluster-nas.md).
+    - repoURL: https://github.com/CoreyC315/talos-test.git
+      targetRevision: main
+      path: platform/nfs-csi/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system # drivers live here (system-level, PSS-exempt) — same as the homelab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
