@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: media-gpu
+  labels: { app: jellyfin }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single writer for the library SQLite on RWX-NFS
+  selector:
+    matchLabels: { app: jellyfin }
+  template:
+    metadata:
+      labels: { app: jellyfin }
+    spec:
+      # Pinned to worker-1 — the only Talos node with the Vega iGPU passed through.
+      nodeSelector:
+        kubernetes.io/hostname: worker-1
+      securityContext:
+        fsGroup: 1000 # owns the /config NFS volume for PUID 1000
+        # NOTE: on Talos /dev/dri/renderD128 is mode 666 (world-rw) + group root, so VAAPI works with
+        # no render-group membership (unlike the homelab's 110/44). privileged below grants device-cgroup access.
+      containers:
+        - name: jellyfin
+          image: jellyfin/jellyfin:10.11.8 # official image (same as homelab), not linuxserver
+          securityContext:
+            privileged: true # device cgroup access to open /dev/dri/renderD128 (VAAPI)
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: TZ, value: "America/Detroit" }
+          ports:
+            - { name: http, containerPort: 8096 }
+          volumeMounts:
+            - { name: config, mountPath: /config } # migrated Akasha data on NFS
+            - { name: media, mountPath: /media }   # shared library (read)
+            - { name: dri, mountPath: /dev/dri }   # the Vega iGPU
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 3Gi }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin-config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-library
+        - name: dri
+          hostPath:
+            path: /dev/dri # the GPU render node on worker-1 (appears once amdgpu initializes it)
+            type: Directory
