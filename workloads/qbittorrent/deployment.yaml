@@ -35,6 +35,12 @@ spec:
             # default → without them the WebUI is unreachable and qbit can't reach in-cluster DNS/peers.
             - { name: FIREWALL_INPUT_PORTS, value: "8080" } # allow the WebUI in (Service/Gateway, sonarr)
             - { name: FIREWALL_OUTBOUND_SUBNETS, value: "10.244.0.0/16,10.96.0.0/12" } # pod + service CIDRs
+            # Cilium pod MTU is 1450; WireGuard adds ~60B overhead, so the default WG MTU (1400) drops
+            # full-size packets → healthcheck (TLS/DNS) i/o timeouts → endless VPN restart loop → qbit
+            # "firewalled". Pin WG MTU well under the underlay, and give the tunnel + ProtonVPN port-
+            # forward negotiation time to settle before the healthcheck judges it.
+            - { name: WIREGUARD_MTU, value: "1320" }
+            - { name: HEALTH_VPN_DURATION_INITIAL, value: "30s" }
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 256Mi }
