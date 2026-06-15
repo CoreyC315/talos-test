@@ -5,7 +5,7 @@ metadata:
   namespace: media
   labels: { app: prowlarr }
 spec:
-  replicas: 0 # handed off to k0s (its real Prowlarr now owns the shared NFS config; one writer at a time)
+  replicas: 1 # consolidated onto Talos (k0s scaled to 0; one writer on shared NFS config)
   selector:
     matchLabels: { app: prowlarr }
   strategy:
