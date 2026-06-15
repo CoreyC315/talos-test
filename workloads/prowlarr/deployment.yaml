@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr
+  namespace: media
+  labels: { app: prowlarr }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: prowlarr }
+  strategy:
+    type: Recreate # config is RWX-NFS but a single writer is safest for the SQLite db
+  template:
+    metadata:
+      labels: { app: prowlarr }
+    spec:
+      containers:
+        - name: prowlarr
+          image: lscr.io/linuxserver/prowlarr:2.3.5.5327-ls144 # pinned, same as the homelab
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: TZ, value: "Etc/UTC" }
+          ports:
+            - { name: http, containerPort: 9696 }
+          readinessProbe:
+            httpGet: { path: /ping, port: 9696 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /ping, port: 9696 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: prowlarr-config
