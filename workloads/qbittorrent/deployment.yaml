@@ -5,7 +5,7 @@ metadata:
   namespace: media-dl
   labels: { app: qbittorrent }
 spec:
-  replicas: 1 # fresh ProtonVPN WireGuard key (wg-US-MI-1)
+  replicas: 0 # parked — VPN flapping on unstable network (aether down); bring up when stable
   selector:
     matchLabels: { app: qbittorrent }
   strategy:
